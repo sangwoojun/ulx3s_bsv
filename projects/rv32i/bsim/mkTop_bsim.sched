@@ -1,0 +1,355 @@
+=== Generated schedule for mkTop_bsim ===
+
+Rule schedule
+-------------
+Rule: main_imem_mem_serverAdapterA_outData_setFirstCore
+Predicate: main_imem_mem_serverAdapterA_outDataCore.i_notEmpty &&
+	   main_imem_mem_serverAdapterA_outDataCore.notEmpty
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_outData_setFirstEnq
+Predicate: (! main_imem_mem_serverAdapterA_outDataCore.notEmpty) &&
+	   main_imem_mem_serverAdapterA_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_outData_enqOnly
+Predicate: main_imem_mem_serverAdapterA_outDataCore.i_notFull &&
+	   (! main_imem_mem_serverAdapterA_outData_deqCalled.whas) &&
+	   main_imem_mem_serverAdapterA_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_outData_deqOnly
+Predicate: main_imem_mem_serverAdapterA_outDataCore.i_notEmpty &&
+	   main_imem_mem_serverAdapterA_outData_deqCalled.whas &&
+	   (! main_imem_mem_serverAdapterA_outData_enqData.whas)
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_outData_enqAndDeq
+Predicate: main_imem_mem_serverAdapterA_outDataCore.i_notEmpty &&
+	   main_imem_mem_serverAdapterA_outDataCore.i_notFull &&
+	   main_imem_mem_serverAdapterA_outData_deqCalled.whas &&
+	   main_imem_mem_serverAdapterA_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_cnt_finalAdd
+Predicate: main_imem_mem_serverAdapterA_cnt_1.whas ||
+	   main_imem_mem_serverAdapterA_cnt_2.whas ||
+	   main_imem_mem_serverAdapterA_cnt_3.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_s1__dreg_update
+Predicate: True
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_stageReadResponseAlways
+Predicate: main_imem_mem_serverAdapterA_writeWithResp.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_moveToOutFIFO
+Predicate: ((! main_imem_mem_serverAdapterA_s1[0]) ||
+	    main_imem_mem_serverAdapterA_outDataCore.notFull) &&
+	   main_imem_mem_serverAdapterA_s1[1]
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterA_overRun
+Predicate: main_imem_mem_serverAdapterA_s1[1] &&
+	   (! main_imem_mem_serverAdapterA_outDataCore.notFull)
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_outData_setFirstCore
+Predicate: main_imem_mem_serverAdapterB_outDataCore.i_notEmpty &&
+	   main_imem_mem_serverAdapterB_outDataCore.notEmpty
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_outData_setFirstEnq
+Predicate: (! main_imem_mem_serverAdapterB_outDataCore.notEmpty) &&
+	   main_imem_mem_serverAdapterB_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_outData_enqOnly
+Predicate: main_imem_mem_serverAdapterB_outDataCore.i_notFull &&
+	   (! main_imem_mem_serverAdapterB_outData_deqCalled.whas) &&
+	   main_imem_mem_serverAdapterB_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_outData_deqOnly
+Predicate: main_imem_mem_serverAdapterB_outDataCore.i_notEmpty &&
+	   main_imem_mem_serverAdapterB_outData_deqCalled.whas &&
+	   (! main_imem_mem_serverAdapterB_outData_enqData.whas)
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_outData_enqAndDeq
+Predicate: main_imem_mem_serverAdapterB_outDataCore.i_notEmpty &&
+	   main_imem_mem_serverAdapterB_outDataCore.i_notFull &&
+	   main_imem_mem_serverAdapterB_outData_deqCalled.whas &&
+	   main_imem_mem_serverAdapterB_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_cnt_finalAdd
+Predicate: main_imem_mem_serverAdapterB_cnt_1.whas ||
+	   main_imem_mem_serverAdapterB_cnt_2.whas ||
+	   main_imem_mem_serverAdapterB_cnt_3.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_s1__dreg_update
+Predicate: True
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_stageReadResponseAlways
+Predicate: main_imem_mem_serverAdapterB_writeWithResp.whas
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_moveToOutFIFO
+Predicate: ((! main_imem_mem_serverAdapterB_s1[0]) ||
+	    main_imem_mem_serverAdapterB_outDataCore.notFull) &&
+	   main_imem_mem_serverAdapterB_s1[1]
+Blocking rules: (none)
+ 
+Rule: main_imem_mem_serverAdapterB_overRun
+Predicate: main_imem_mem_serverAdapterB_s1[1] &&
+	   (! main_imem_mem_serverAdapterB_outDataCore.notFull)
+Blocking rules: (none)
+ 
+Rule: main_imem_doWrite
+Predicate: main_imem_reqQ.i_notEmpty &&
+	   (main_imem_mem_serverAdapterA_outDataCore.notEmpty ||
+	    main_imem_mem_serverAdapterA_outData_enqData.whas) &&
+	   (main_imem_mem_serverAdapterB_cnt .< 3'd3) &&
+	   (main_imem_reqQ.first[0]
+	    ? main_imem_mem_serverAdapterA_outData_outData.whas
+	    : main_imem_readOffsetQ.i_notFull)
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_outData_setFirstCore
+Predicate: main_dmem_mem_serverAdapterA_outDataCore.i_notEmpty &&
+	   main_dmem_mem_serverAdapterA_outDataCore.notEmpty
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_outData_setFirstEnq
+Predicate: (! main_dmem_mem_serverAdapterA_outDataCore.notEmpty) &&
+	   main_dmem_mem_serverAdapterA_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_outData_enqOnly
+Predicate: main_dmem_mem_serverAdapterA_outDataCore.i_notFull &&
+	   (! main_dmem_mem_serverAdapterA_outData_deqCalled.whas) &&
+	   main_dmem_mem_serverAdapterA_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_outData_deqOnly
+Predicate: main_dmem_mem_serverAdapterA_outDataCore.i_notEmpty &&
+	   main_dmem_mem_serverAdapterA_outData_deqCalled.whas &&
+	   (! main_dmem_mem_serverAdapterA_outData_enqData.whas)
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_outData_enqAndDeq
+Predicate: main_dmem_mem_serverAdapterA_outDataCore.i_notEmpty &&
+	   main_dmem_mem_serverAdapterA_outDataCore.i_notFull &&
+	   main_dmem_mem_serverAdapterA_outData_deqCalled.whas &&
+	   main_dmem_mem_serverAdapterA_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_cnt_finalAdd
+Predicate: main_dmem_mem_serverAdapterA_cnt_1.whas ||
+	   main_dmem_mem_serverAdapterA_cnt_2.whas ||
+	   main_dmem_mem_serverAdapterA_cnt_3.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_s1__dreg_update
+Predicate: True
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_stageReadResponseAlways
+Predicate: main_dmem_mem_serverAdapterA_writeWithResp.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_moveToOutFIFO
+Predicate: ((! main_dmem_mem_serverAdapterA_s1[0]) ||
+	    main_dmem_mem_serverAdapterA_outDataCore.notFull) &&
+	   main_dmem_mem_serverAdapterA_s1[1]
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterA_overRun
+Predicate: main_dmem_mem_serverAdapterA_s1[1] &&
+	   (! main_dmem_mem_serverAdapterA_outDataCore.notFull)
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_outData_setFirstCore
+Predicate: main_dmem_mem_serverAdapterB_outDataCore.i_notEmpty &&
+	   main_dmem_mem_serverAdapterB_outDataCore.notEmpty
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_outData_setFirstEnq
+Predicate: (! main_dmem_mem_serverAdapterB_outDataCore.notEmpty) &&
+	   main_dmem_mem_serverAdapterB_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_outData_enqOnly
+Predicate: main_dmem_mem_serverAdapterB_outDataCore.i_notFull &&
+	   (! main_dmem_mem_serverAdapterB_outData_deqCalled.whas) &&
+	   main_dmem_mem_serverAdapterB_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_outData_deqOnly
+Predicate: main_dmem_mem_serverAdapterB_outDataCore.i_notEmpty &&
+	   main_dmem_mem_serverAdapterB_outData_deqCalled.whas &&
+	   (! main_dmem_mem_serverAdapterB_outData_enqData.whas)
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_outData_enqAndDeq
+Predicate: main_dmem_mem_serverAdapterB_outDataCore.i_notEmpty &&
+	   main_dmem_mem_serverAdapterB_outDataCore.i_notFull &&
+	   main_dmem_mem_serverAdapterB_outData_deqCalled.whas &&
+	   main_dmem_mem_serverAdapterB_outData_enqData.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_cnt_finalAdd
+Predicate: main_dmem_mem_serverAdapterB_cnt_1.whas ||
+	   main_dmem_mem_serverAdapterB_cnt_2.whas ||
+	   main_dmem_mem_serverAdapterB_cnt_3.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_s1__dreg_update
+Predicate: True
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_stageReadResponseAlways
+Predicate: main_dmem_mem_serverAdapterB_writeWithResp.whas
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_moveToOutFIFO
+Predicate: ((! main_dmem_mem_serverAdapterB_s1[0]) ||
+	    main_dmem_mem_serverAdapterB_outDataCore.notFull) &&
+	   main_dmem_mem_serverAdapterB_s1[1]
+Blocking rules: (none)
+ 
+Rule: main_dmem_mem_serverAdapterB_overRun
+Predicate: main_dmem_mem_serverAdapterB_s1[1] &&
+	   (! main_dmem_mem_serverAdapterB_outDataCore.notFull)
+Blocking rules: (none)
+ 
+Rule: main_dmem_doWrite
+Predicate: main_dmem_reqQ.i_notEmpty &&
+	   (main_dmem_mem_serverAdapterA_outDataCore.notEmpty ||
+	    main_dmem_mem_serverAdapterA_outData_enqData.whas) &&
+	   (main_dmem_mem_serverAdapterB_cnt .< 3'd3) &&
+	   (main_dmem_reqQ.first[0]
+	    ? main_dmem_mem_serverAdapterA_outData_outData.whas
+	    : main_dmem_readOffsetQ.i_notFull)
+Blocking rules: (none)
+ 
+Rule: main_relayImemReq
+Predicate: main_proc.RDY_iMemReq &&
+	   main_imem_reqQ.i_notFull &&
+	   (main_imem_mem_serverAdapterA_cnt .< 3'd3) &&
+	   main_processorStart
+Blocking rules: (none)
+ 
+Rule: main_relayDmemReq
+Predicate: main_proc.RDY_dMemReq &&
+	   main_serialtxQ.i_notFull &&
+	   main_dmem_reqQ.i_notFull &&
+	   (main_dmem_mem_serverAdapterA_cnt .< 3'd3) &&
+	   main_processorStart
+Blocking rules: (none)
+ 
+Rule: main_procimemread
+Predicate: main_proc.RDY_iMemResp &&
+	   (main_imem_mem_serverAdapterB_outDataCore.notEmpty ||
+	    main_imem_mem_serverAdapterB_outData_enqData.whas) &&
+	   main_imem_mem_serverAdapterB_outData_outData.whas &&
+	   main_imem_readOffsetQ.i_notEmpty
+Blocking rules: (none)
+ 
+Rule: main_procdmemread
+Predicate: main_proc.RDY_dMemResp &&
+	   (main_dmem_mem_serverAdapterB_outDataCore.notEmpty ||
+	    main_dmem_mem_serverAdapterB_outData_enqData.whas) &&
+	   main_dmem_mem_serverAdapterB_outData_outData.whas &&
+	   main_dmem_readOffsetQ.i_notEmpty
+Blocking rules: (none)
+ 
+Rule: main_procSerialRx
+Predicate: main_serialrxQ.i_notEmpty &&
+	   ((! main_serialCmd[8]) ||
+	    (main_serialCmd[8]
+	     ? main_serialCmd[7:0]
+	     : (_ :: Bit 8))[0] ||
+	    ((main_serialCmd[8]
+	      ? main_serialCmd[7:0]
+	      : (_ :: Bit 8))[1]
+	     ? main_dmem_reqQ.i_notFull &&
+	       (main_dmem_mem_serverAdapterA_cnt .< 3'd3)
+	     : (main_imem_reqQ.i_notFull &&
+		(main_imem_mem_serverAdapterA_cnt .< 3'd3))))
+Blocking rules: main_relayDmemReq, main_relayImemReq
+ 
+Rule: uart_relayOut
+Predicate: uart_outQ.i_notFull
+Blocking rules: (none)
+ 
+Rule: uart_relayIn
+Predicate: uart_inQ.i_notEmpty
+Blocking rules: (none)
+ 
+Rule: relayUartIn
+Predicate: uart_outQ.i_notEmpty && main_serialrxQ.i_notFull
+Blocking rules: (none)
+ 
+Rule: relayUartOut
+Predicate: main_serialtxQ.i_notEmpty && uart_inQ.i_notFull
+Blocking rules: (none)
+ 
+Logical execution order: relayUartIn,
+			 relayUartOut,
+			 main_relayImemReq,
+			 main_relayDmemReq,
+			 main_procSerialRx,
+			 main_imem_mem_serverAdapterA_stageReadResponseAlways,
+			 main_imem_mem_serverAdapterA_moveToOutFIFO,
+			 main_imem_mem_serverAdapterA_overRun,
+			 main_imem_mem_serverAdapterA_outData_setFirstCore,
+			 main_imem_mem_serverAdapterA_outData_setFirstEnq,
+			 main_imem_doWrite,
+			 main_imem_mem_serverAdapterA_outData_enqOnly,
+			 main_imem_mem_serverAdapterA_outData_deqOnly,
+			 main_imem_mem_serverAdapterA_outData_enqAndDeq,
+			 main_imem_mem_serverAdapterA_cnt_finalAdd,
+			 main_imem_mem_serverAdapterA_s1__dreg_update,
+			 main_imem_mem_serverAdapterB_stageReadResponseAlways,
+			 main_imem_mem_serverAdapterB_moveToOutFIFO,
+			 main_imem_mem_serverAdapterB_overRun,
+			 main_imem_mem_serverAdapterB_outData_setFirstCore,
+			 main_imem_mem_serverAdapterB_outData_setFirstEnq,
+			 main_procimemread,
+			 main_imem_mem_serverAdapterB_outData_enqOnly,
+			 main_imem_mem_serverAdapterB_outData_deqOnly,
+			 main_imem_mem_serverAdapterB_outData_enqAndDeq,
+			 main_imem_mem_serverAdapterB_cnt_finalAdd,
+			 main_imem_mem_serverAdapterB_s1__dreg_update,
+			 main_dmem_mem_serverAdapterA_stageReadResponseAlways,
+			 main_dmem_mem_serverAdapterA_moveToOutFIFO,
+			 main_dmem_mem_serverAdapterA_overRun,
+			 main_dmem_mem_serverAdapterA_outData_setFirstCore,
+			 main_dmem_mem_serverAdapterA_outData_setFirstEnq,
+			 main_dmem_doWrite,
+			 main_dmem_mem_serverAdapterA_outData_enqOnly,
+			 main_dmem_mem_serverAdapterA_outData_deqOnly,
+			 main_dmem_mem_serverAdapterA_outData_enqAndDeq,
+			 main_dmem_mem_serverAdapterA_cnt_finalAdd,
+			 main_dmem_mem_serverAdapterA_s1__dreg_update,
+			 main_dmem_mem_serverAdapterB_stageReadResponseAlways,
+			 main_dmem_mem_serverAdapterB_moveToOutFIFO,
+			 main_dmem_mem_serverAdapterB_overRun,
+			 main_dmem_mem_serverAdapterB_outData_setFirstCore,
+			 main_dmem_mem_serverAdapterB_outData_setFirstEnq,
+			 main_procdmemread,
+			 main_dmem_mem_serverAdapterB_outData_enqOnly,
+			 main_dmem_mem_serverAdapterB_outData_deqOnly,
+			 main_dmem_mem_serverAdapterB_outData_enqAndDeq,
+			 main_dmem_mem_serverAdapterB_cnt_finalAdd,
+			 main_dmem_mem_serverAdapterB_s1__dreg_update,
+			 uart_relayOut,
+			 uart_relayIn
+
+==========================================

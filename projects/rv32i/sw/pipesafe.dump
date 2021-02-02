@@ -1,0 +1,29 @@
+
+././obj//binary.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <.text>:
+   0:	40000313          	addi	x6,x0,1024
+   4:	00100493          	addi	x9,x0,1
+   8:	00200913          	addi	x18,x0,2
+   c:	00000013          	addi	x0,x0,0
+  10:	00000013          	addi	x0,x0,0
+  14:	00000013          	addi	x0,x0,0
+  18:	00000013          	addi	x0,x0,0
+  1c:	00000013          	addi	x0,x0,0
+  20:	00000013          	addi	x0,x0,0
+  24:	00000013          	addi	x0,x0,0
+  28:	00000013          	addi	x0,x0,0
+  2c:	012489b3          	add	x19,x9,x18
+  30:	00000013          	addi	x0,x0,0
+  34:	00000013          	addi	x0,x0,0
+  38:	00000013          	addi	x0,x0,0
+  3c:	00000013          	addi	x0,x0,0
+  40:	00000013          	addi	x0,x0,0
+  44:	00000013          	addi	x0,x0,0
+  48:	00000013          	addi	x0,x0,0
+  4c:	00000013          	addi	x0,x0,0
+  50:	01332023          	sw	x19,0(x6)
+  54:	c0001073          	unimp

@@ -1,0 +1,78 @@
+
+././obj//binary.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00000000 <branch-0x84>:
+   0:	00200293          	addi	x5,x0,2
+   4:	00300313          	addi	x6,x0,3
+   8:	00700393          	addi	x7,x0,7
+   c:	00000013          	addi	x0,x0,0
+  10:	00000013          	addi	x0,x0,0
+  14:	00000013          	addi	x0,x0,0
+  18:	00000013          	addi	x0,x0,0
+  1c:	00000013          	addi	x0,x0,0
+  20:	026282b3          	mul	x5,x5,x6
+  24:	00000013          	addi	x0,x0,0
+  28:	00000013          	addi	x0,x0,0
+  2c:	00000013          	addi	x0,x0,0
+  30:	00000013          	addi	x0,x0,0
+  34:	00000013          	addi	x0,x0,0
+  38:	00638333          	add	x6,x7,x6
+  3c:	00000013          	addi	x0,x0,0
+  40:	00000013          	addi	x0,x0,0
+  44:	00000013          	addi	x0,x0,0
+  48:	00000013          	addi	x0,x0,0
+  4c:	00000013          	addi	x0,x0,0
+  50:	026282b3          	mul	x5,x5,x6
+  54:	00000013          	addi	x0,x0,0
+  58:	00000013          	addi	x0,x0,0
+  5c:	00000013          	addi	x0,x0,0
+  60:	00000013          	addi	x0,x0,0
+  64:	00000013          	addi	x0,x0,0
+  68:	40000e13          	addi	x28,x0,1024
+  6c:	00000013          	addi	x0,x0,0
+  70:	00000013          	addi	x0,x0,0
+  74:	00000013          	addi	x0,x0,0
+  78:	00000013          	addi	x0,x0,0
+  7c:	00000013          	addi	x0,x0,0
+  80:	005e2023          	sw	x5,0(x28)
+
+00000084 <branch>:
+  84:	40100293          	addi	x5,x0,1025
+  88:	00300313          	addi	x6,x0,3
+  8c:	00300393          	addi	x7,x0,3
+  90:	00000e13          	addi	x28,x0,0
+  94:	00000013          	addi	x0,x0,0
+  98:	00000013          	addi	x0,x0,0
+  9c:	00000013          	addi	x0,x0,0
+  a0:	00000013          	addi	x0,x0,0
+  a4:	00000013          	addi	x0,x0,0
+  a8:	00000013          	addi	x0,x0,0
+  ac:	00730663          	beq	x6,x7,b8 <skip>
+  b0:	01c2a023          	sw	x28,0(x5)
+  b4:	0080006f          	jal	x0,bc <multunsafe>
+
+000000b8 <skip>:
+  b8:	0072a023          	sw	x7,0(x5)
+
+000000bc <multunsafe>:
+  bc:	00200293          	addi	x5,x0,2
+  c0:	00700313          	addi	x6,x0,7
+  c4:	01100393          	addi	x7,x0,17
+  c8:	00500e13          	addi	x28,x0,5
+  cc:	ffc38393          	addi	x7,x7,-4
+  d0:	027303b3          	mul	x7,x6,x7
+  d4:	005e02b3          	add	x5,x28,x5
+  d8:	405382b3          	sub	x5,x7,x5
+  dc:	40200e13          	addi	x28,x0,1026
+  e0:	005e2023          	sw	x5,0(x28)
+  e4:	40300313          	addi	x6,x0,1027
+  e8:	00001297          	auipc	x5,0x1
+  ec:	f1828293          	addi	x5,x5,-232 # 1000 <testdata>
+  f0:	0002a483          	lw	x9,0(x5)
+  f4:	0042a903          	lw	x18,4(x5)
+  f8:	012489b3          	add	x19,x9,x18
+  fc:	01332023          	sw	x19,0(x6)
+ 100:	c0001073          	unimp

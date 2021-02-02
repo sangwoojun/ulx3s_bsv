@@ -1,0 +1,64 @@
+=== Generated schedule for mkProcessor ===
+
+Method schedule
+---------------
+Method: iMemReq
+Ready signal: imemReqQ.i_notEmpty
+Conflict-free: iMemResp, dMemReq, dMemResp
+Conflicts: iMemReq
+ 
+Method: iMemResp
+Ready signal: imemRespQ.i_notFull
+Conflict-free: iMemReq, dMemReq, dMemResp
+Conflicts: iMemResp
+ 
+Method: dMemReq
+Ready signal: dmemReqQ.i_notEmpty
+Conflict-free: iMemReq, iMemResp, dMemResp
+Conflicts: dMemReq
+ 
+Method: dMemResp
+Ready signal: dmemRespQ.i_notFull
+Conflict-free: iMemReq, iMemResp, dMemReq
+Conflicts: dMemResp
+ 
+Rule schedule
+-------------
+Rule: incCycle
+Predicate: True
+Blocking rules: (none)
+ 
+Rule: doFetch
+Predicate: imemReqQ.i_notFull && f2d.i_notFull && (stage == 2'd0)
+Blocking rules: (none)
+ 
+Rule: doDecode
+Predicate: f2d.i_notEmpty && imemRespQ.i_notEmpty && d2e.i_notFull &&
+	   (stage == 2'd1)
+Blocking rules: (none)
+ 
+Rule: doExecute
+Predicate: d2e.i_notEmpty &&
+	   e2m.i_notFull &&
+	   ((d2e.first[125:122] == 4'd6)
+	    ? dmemReqQ.i_notFull
+	    : ((! (d2e.first[125:122] == 4'd7)) || dmemReqQ.i_notFull)) &&
+	   (stage == 2'd2)
+Blocking rules: (none)
+ 
+Rule: doWriteback
+Predicate: e2m.i_notEmpty && ((! e2m.first[35]) || dmemRespQ.i_notEmpty) &&
+	   (stage == 2'd3)
+Blocking rules: (none)
+ 
+Logical execution order: iMemReq,
+			 iMemResp,
+			 dMemReq,
+			 dMemResp,
+			 doFetch,
+			 doDecode,
+			 doExecute,
+			 doWriteback,
+			 incCycle
+
+===========================================
