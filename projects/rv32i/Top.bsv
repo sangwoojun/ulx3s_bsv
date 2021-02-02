@@ -23,14 +23,13 @@ module mkHwMain(HwMainIfc);
 	rule relayImemReq (processorStart);
 		let req <- proc.iMemReq;
 		imem.req(truncate(req.addr), req.word, req.bytes, req.write);
-		$write( "imem req to %d %d\n", req.addr, req.bytes );
 	endrule
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
 	rule relayDmemReq (processorStart);
 		let req <- proc.dMemReq;
 		if (req.write && 0 == (req.addr>>12)) begin
 			serialtxQ.enq(truncate(req.word));
-			$write("!!!! %x %x\n", req.addr, req.word);
+			$write("Write  %x %x\n", req.addr, req.word);
 		end else begin
 			dmem.req(truncate(req.addr), req.word, req.bytes, req.write); // truncating address should work automatically
 		end
@@ -65,19 +64,19 @@ module mkHwMain(HwMainIfc);
 			Bit#(8) cmd = fromMaybe(?, serialCmd);
 			if ( cmd[0] == 0 ) begin // mem IO
 				if ( cmd[1] == 0 ) begin // imem
-					if ( cmd[2] == 0 ) begin // mem write
+					//if ( cmd[2] == 0 ) begin // mem write
 						imembytes <= imembytes + 1;
 						imem.req(imembytes, zeroExtend(d), 0, True); // write 1 byte to bwoff
-					end else begin // mem read
-						imem.req(imembytes, zeroExtend(d), 0, False); // read 1 byte from bwoff
-					end
+					//end else begin // mem read
+					//	imem.req(imembytes, zeroExtend(d), 0, False); // read 1 byte from bwoff
+					//end
 				end else begin // dmem
-					if ( cmd[2] == 0 ) begin // mem write
+					//if ( cmd[2] == 0 ) begin // mem write
 						dmembytes <= dmembytes + 1;
 						dmem.req(dmembytes, zeroExtend(d), 0, True); // write 1 byte to bwoff
-					end else begin // mem read
-						dmem.req(dmembytes, zeroExtend(d), 0, False); // read 1 byte from bwoff
-					end
+					//end else begin // mem read
+					//	dmem.req(dmembytes, zeroExtend(d), 0, False); // read 1 byte from bwoff
+					//end
 				end 
 			end
 			else begin // non-mem cmd, or mem cmd issued when processor started...

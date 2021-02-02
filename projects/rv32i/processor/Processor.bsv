@@ -46,15 +46,9 @@ endinterface
 
 (* synthesize *)
 module mkProcessor(ProcessorIfc);
-	Reg#(Bit#(32)) cycles <- mkReg(0);
-	Reg#(Bit#(32)) instCnt <- mkReg(0);
-	rule incCycle;
-		cycles <= cycles + 1;
-	endrule
-
-	
 	Reg#(Word)  pc <- mkReg(0);
 	RFile2R1W   rf <- mkRFile2R1W;
+
 	Reg#(ProcStage) stage <- mkReg(Fetch);
 
 	FIFOF#(F2D) f2d <- mkSizedFIFOF(2);
@@ -67,6 +61,11 @@ module mkProcessor(ProcessorIfc);
 	FIFO#(Word) dmemRespQ <- mkFIFO;
 
 
+	Reg#(Bit#(32)) cycles <- mkReg(0);
+	Reg#(Bit#(32)) instCnt <- mkReg(0);
+	rule incCycle;
+		cycles <= cycles + 1;
+	endrule
 
 	rule doFetch (stage == Fetch);
 		Word curpc = pc;
