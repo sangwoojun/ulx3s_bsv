@@ -27,11 +27,16 @@ module mkHwMain(HwMainIfc);
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
 	rule relayDmemReq (processorStart);
 		let req <- proc.dMemReq;
-		if (req.write && 0 == (req.addr>>12)) begin
-			serialtxQ.enq(truncate(req.word));
-			$write("Write  %x %x\n", req.addr, req.word);
+		if ( 0 == (req.addr>>12)) begin
+			if ( req.write) begin
+				serialtxQ.enq(truncate(req.word));
+				//$write("Writing!  %x(%d) %x\n", req.addr,req.bytes, req.word);
+			end else begin
+				//$write("Reading!  %x(%d) %x\n", req.addr,req.bytes, req.word);
+			end
 		end else begin
 			dmem.req(truncate(req.addr), req.word, req.bytes, req.write); // truncating address should work automatically
+			//$write("Reading!  %x(%d) %x\n", req.addr,req.bytes, req.word);
 		end
 	endrule
 
@@ -42,14 +47,13 @@ module mkHwMain(HwMainIfc);
 
 	rule procimemread;
 		let d <- imem.resp;
-		//serialtxQ.enq(truncate(d));
 		proc.iMemResp(d);
 		//$write( "imem resp %x\n", d );
 	endrule
 	rule procdmemread;
 		let d <- dmem.resp;
-		//serialtxQ.enq(truncate(d));
 		proc.dMemResp(d);
+		//$write( "dmem resp %x\n",d );
 	endrule
 
 	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
@@ -136,6 +140,7 @@ module mkTop_bsim(Empty);
 	endrule
 	rule relayUartOut;
 		let d <- main.serial_tx;
+		//$write( "uart sending serial\n" );
 		uart.send(d);
 	endrule
 endmodule

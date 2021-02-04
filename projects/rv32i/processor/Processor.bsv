@@ -135,7 +135,7 @@ module mkProcessor(ProcessorIfc);
 		else if (eInst.iType == STORE) begin
 			dmemReqQ.enq(MemReq32{write:True,addr:truncate(eInst.addr), word:eInst.data, bytes:dInst.size});
 			$write( "[0x%8x:0x%04x] \t\t Mem write 0x%08x to 0x%08x\n", cycles, curpc, eInst.data, eInst.addr );
-			e2m.enq(E2M{dst:0,extendSigned:?,size:?, pc:curpc, data:?, isMem: False});
+			//e2m.enq(E2M{dst:0,extendSigned:?,size:?, pc:curpc, data:?, isMem: False});
 			stage <= Fetch;
 		end
 		else begin
@@ -144,7 +144,7 @@ module mkProcessor(ProcessorIfc);
 				stage <= Writeback;
 			end else begin
 				stage <= Fetch;
-				e2m.enq(E2M{dst:0,extendSigned:?,size:?, pc:curpc, data:?, isMem: False});
+				//e2m.enq(E2M{dst:0,extendSigned:?,size:?, pc:curpc, data:?, isMem: False});
 			end
 		end
 	endrule

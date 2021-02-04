@@ -75,7 +75,7 @@ void uart_send(uint8_t data) {
 
 
 int swmain() {
-	FILE* bin = fopen("sw/microbench.bin", "rb");
+	FILE* bin = fopen("sw/minisudoku.bin", "rb");
 	int byteoff = 0;
 	while(!feof(bin)) {
 		uint8_t din;
@@ -84,13 +84,21 @@ int swmain() {
 			uart_send(0); //imem write
 		} else {
 			uart_send(2); //dmem write 'b010
+			printf( "Loading %x to %d\n", din, byteoff );
 		}
 		uart_send(din);
 		byteoff ++;
 	}
-	printf( "sent all data\n" ); fflush(stdout);
+	printf( "sent all data %d\n", byteoff ); fflush(stdout);
 	uart_send(1); // start processor
 	uart_send(1); // start processor
 
-	while(true) ;
+	while(true) {
+		uint32_t c = uart_recv();
+		if ( c > 0xff ) continue;
+		uint8_t cr = c;
+
+		//fprintf(stderr, "<%c:0x%x>", cr, cr );
+		fprintf(stderr, "%c", cr );
+	}
 }

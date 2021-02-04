@@ -57,9 +57,9 @@ module mkBRAMSubWord (BRAMSubWord4Ifc#(asz))
 	endmethod
 	method ActionValue#(Bit#(32)) resp;
 		let d <- mem.portB.response.get;
-		let o = readOffsetQ.first;
+		Bit#(5) so = zeroExtend(readOffsetQ.first);
 		readOffsetQ.deq;
-		//$write("!~~ %x %x\n", d, o);
-		return (d>>o);
+		//$write("!~~ %x %x\n", d, so);
+		return (d>>(so*8));
 	endmethod
 endmodule
