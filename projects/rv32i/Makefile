@@ -14,7 +14,7 @@ BSIM_CPPFILES= ./cpp/main.cpp
 #$(ROOTDIR)/cpp/PcieBdpi.cpp \
 	$(ROOTDIR)/cpp/ShmFifo.cpp
 
-all:
+all: Top.bsv $(wildcard $(BSVPATH)/*.bsv) $(wildcard processor/*.bsv) cpp/main.cpp
 	rm -rf build
 	mkdir -p build
 	cd $(BUILD_DIR); apio init -b ulx3s-85f -p .
@@ -25,11 +25,13 @@ all:
 	cd build; apio verify 
 	cd build; apio build -v
 
-bsim: Top.bsv cpp/main.cpp
+bsim: Top.bsv $(wildcard $(BSVPATH)/*.bsv) $(wildcard processor/*.bsv) cpp/main.cpp
 	mkdir -p $(BSIM_DIR)
 	bsc $(BSCFLAGS) $(BSCFLAGS_BSIM) $(DEBUGFLAGS) -p +:$(BSVPATH_ALL) -sim -u -g mkTop_bsim ./Top.bsv  
 	bsc $(BSCFLAGS) $(BSCFLAGS_BSIM) $(DEBUGFLAGS) -sim -e mkTop_bsim -o $(BSIM_DIR)/bsim $(BSIM_DIR)/*.ba $(BSIM_CPPFILES)
 
+runsim: bsim
+	./bsim/bsim 2> output.log | tee system.log
 
 program:
 	cd build; apio upload
