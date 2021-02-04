@@ -84,7 +84,7 @@ int swmain() {
 			uart_send(0); //imem write
 		} else {
 			uart_send(2); //dmem write 'b010
-			printf( "Loading %x to %d\n", din, byteoff );
+			//printf( "Loading %x to %d\n", din, byteoff );
 		}
 		uart_send(din);
 		byteoff ++;
