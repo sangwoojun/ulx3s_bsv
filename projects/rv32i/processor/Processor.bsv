@@ -62,7 +62,8 @@ module mkProcessor(ProcessorIfc);
 
 
 	Reg#(Bit#(32)) cycles <- mkReg(0);
-	Reg#(Bit#(32)) instCnt <- mkReg(0);
+	Reg#(Bit#(32)) fetchCnt <- mkReg(0);
+	Reg#(Bit#(32)) execCnt <- mkReg(0);
 	rule incCycle;
 		cycles <= cycles + 1;
 	endrule
@@ -73,7 +74,8 @@ module mkProcessor(ProcessorIfc);
 		imemReqQ.enq(MemReq32{write:False,addr:truncate(pc),word:?,bytes:3});
 		f2d.enq(F2D {pc: curpc});
 
-		$write( "[0x%8x:0x%4x] Fetching instruction count 0x%4x\n", cycles, curpc, instCnt );
+		$write( "[0x%8x:0x%4x] Fetching instruction count 0x%4x\n", cycles, curpc, fetchCnt );
+		fetchCnt <= fetchCnt + 1;
 		stage <= Decode;
 	endrule
 
@@ -113,12 +115,12 @@ module mkProcessor(ProcessorIfc);
 
 		pc <= eInst.nextPC;
 
-		instCnt <= instCnt + 1;
+		execCnt <= execCnt + 1;
 		$write( "[0x%8x:0x%04x] Executing\n", cycles, curpc );
 		
 		if (eInst.iType == Unsupported) begin
 			$display("Reached unsupported instruction");
-			$display("Total Clock Cycles = %d\nTotal Instruction Count = %d", cycles, instCnt);
+			$display("Total Clock Cycles = %d\nTotal Instruction Count = %d", cycles, execCnt);
 			$display("Dumping the state of the processor");
 			$display("pc = 0x%x", x.pc);
 			//rf.displayRFileInSimulation;
