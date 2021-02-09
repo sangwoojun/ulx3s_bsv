@@ -1,4 +1,4 @@
-.*.sw?
+*.sw?
 bsim
 build
 *.log

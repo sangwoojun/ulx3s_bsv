@@ -21,12 +21,6 @@ typedef struct {
 } D2E deriving(Bits, Eq);
 
 typedef struct {
-	RIndx dst;
-	Word data;
-} BypassTarget deriving(Bits,Eq);
-
-
-typedef struct {
 	Word pc;
 	RIndx dst;
 
