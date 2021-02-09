@@ -103,7 +103,9 @@ function DecodedInst decode(Bit#(32) inst);
 				endcase
 			end
 			else if (funct7 == 7'b0000001) begin
-				 // Multiply instruction
+				//case (funct3)
+				// case fnMUL: 
+				//endcase
 			end
 		end
 		opOpImm: begin
@@ -148,7 +150,6 @@ function DecodedInst decode(Bit#(32) inst);
 			fnLB: dInst = DecodedInst { dst: dst, writeDst: True, src1: src1, src2: 0, imm: immI, brFunc: ?, aluFunc: ?, iType: LOAD, size:0, extendSigned: True };
 			fnLHU: dInst = DecodedInst { dst: dst, writeDst: True, src1: src1, src2:0, imm: immI, brFunc: ?, aluFunc: ?, iType: LOAD, size:1, extendSigned: False };
 			fnLBU: dInst = DecodedInst { dst: dst, writeDst: True, src1: src1, src2:0, imm: immI, brFunc: ?, aluFunc: ?, iType: LOAD, size:0, extendSigned: False };
-			//FIXME sign extend?!
 			endcase
 		end
 		opStore: begin

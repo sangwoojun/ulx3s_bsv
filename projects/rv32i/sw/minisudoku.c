@@ -80,7 +80,16 @@ main() {
 			(*printchar) = (setin[i]+0x30);
 			if ( i % 4 == 3 ) (*printchar) = 0xa;
 		}
+		int mul =1;
+		for ( int i = 0; i < 16; i++ ) {
+			int v = setin[i];
+			asm ("mul %0, %1, %2" : "=r"(mul) : "r"(mul), "r" (v));
+		}
+		(*printchar) = 0xa;
+		(*printchar) = (mul&0x7)+0x30;
+
 	} else {
+		(*printchar) = 0x78;
 		(*printchar) = 0xa;
 	}
 
