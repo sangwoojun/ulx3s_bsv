@@ -19,9 +19,9 @@ module mkPllFast#(Clock clk) (PLLIfc);
 	output_clock clk_25mhz(clk_25mhz);
 	output_clock clk_125mhz(clk_125mhz);
 	output_clock clk_250mhz(clk_250mhz);
-	output_reset rst_25mhz(locked) clocked_by(clk_25mhz);
-	output_reset rst_125mhz(locked) clocked_by(clk_125mhz);
-	output_reset rst_250mhz(locked) clocked_by(clk_250mhz);
+	output_reset rst_25mhz(lockedn) clocked_by(clk_25mhz);
+	output_reset rst_125mhz(lockedn) clocked_by(clk_125mhz);
+	output_reset rst_250mhz(lockedn) clocked_by(clk_250mhz);
 endmodule
 
 endpackage: PLL

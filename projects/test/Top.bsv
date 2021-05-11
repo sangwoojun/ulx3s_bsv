@@ -22,35 +22,30 @@ module mkHwMain(HwMainIfc);
 	Reg#(Maybe#(Bit#(8))) serialCmd <- mkReg(tagged Invalid);
 
 
-	Vector#(32, Mult18x18DIfc) mults <- replicateM(mkMult18x18DImport(curclk, currst));
+	Mult18x18DIfc mult <- mkMult18x18D;
 
 
 	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
-	/*
-	rule procSerialRx;
-		let d = serialrxQ.first;
+	Reg#(Bit#(8)) datbuf <- mkReg(0);
+	rule procUartIn;
+		Bit#(8) charin = serialrxQ.first();
 		serialrxQ.deq;
-		mult1.puta( zeroExtend(d) );
-		mult1.putb( zeroExtend(d>>2) );
-		serialtxQ.enq(d);
+		let n = charin - 48;
+		datbuf <= n;
+		mult.put(zeroExtend(n), zeroExtend(datbuf));
 	endrule
-	*/
-	for(Integer i = 0; i <31; i=i+1 ) begin
-		rule ma;
-			let d = mults[i].dataout;
-			mults[i+1].puta(truncate(d>>2));
-			mults[i+1].putb(truncate(d));
-		endrule
-	end
+	rule outputCnt;
+		let d <- mult.get;
+		serialtxQ.enq(truncate(d)+48);
+	endrule
 
 	method ActionValue#(Bit#(8)) serial_tx;
-		let d = mults[31].dataout;
-		return truncate(d);
+		serialtxQ.deq;
+		return serialtxQ.first();
 	endmethod
 	method Action serial_rx(Bit#(8) d);
-		mults[0].puta(zeroExtend(d));
-		mults[0].putb(zeroExtend(d>>4));
+		serialrxQ.enq(d);
 	endmethod
 endmodule
 
@@ -59,6 +54,8 @@ interface TopIfc;
 	method Bit#(1) ftdi_rxd;
 	(* always_enabled, always_ready, prefix = "", result = "serial_txd" *)
 	method Action ftdi_tx(Bit#(1) ftdi_txd);
+	(* always_enabled, always_ready, prefix = "", result = "led" *)
+	method Bit#(8) led;
 endinterface
 
 (* no_default_clock, no_default_reset*)
@@ -74,9 +71,11 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 
 	HwMainIfc main <- mkHwMain(clocked_by clk_target, reset_by rst_target);
 
+	Reg#(Bit#(8)) uartInWord <- mkReg(0, clocked_by clk_25mhz, reset_by rst_null);
 	rule relayUartIn;
 		Bit#(8) d <- uart.user.get;
 		serialToMainQ.enq(d);
+		uartInWord <= d;
 	endrule
 	rule relayUartIn2;
 		serialToMainQ.deq;
@@ -92,12 +91,27 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 		uart.user.send(mainToSerialQ.first);
 	endrule
 
+	/*
+	Reg#(Bit#(32)) clkcount <- mkReg(0, clocked_by clk_25mhz, reset_by rst_null);
+	Reg#(Bit#(8)) secondcount <- mkReg(0, clocked_by clk_25mhz, reset_by rst_null); 
+	rule incclk;
+		if ( clkcount >= 25000000 ) begin
+			clkcount <= 0;
+			secondcount <= secondcount + 1;
+		end
+		else clkcount <= clkcount + 1;
+	endrule
+	*/
+
 
 	method Bit#(1) ftdi_rxd;
 		return uart.serial_txd;
 	endmethod
 	method Action ftdi_tx(Bit#(1) ftdi_txd);
 		uart.serial_rx(ftdi_txd);
+	endmethod
+	method Bit#(8) led;
+		return uartInWord;
 	endmethod
 endmodule
 

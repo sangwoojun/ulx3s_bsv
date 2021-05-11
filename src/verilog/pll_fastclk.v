@@ -3,9 +3,11 @@ module pll_fastclk(
 	output clk_25mhz,
 	output clk_125mhz,
 	output clk_250mhz,
-	output locked
+	output lockedn
 	);
 wire clkfb;
+wire locked;
+assign lockedn = !locked;
 (* ICP_CURRENT="12" *) (* LPF_RESISTOR="8" *) (* MFG_ENABLE_FILTEROPAMP="1" *) (* MFG_GMCREF_SEL="2" *)
 EHXPLLL #(
 		.PLLRST_ENA("DISABLED"),
