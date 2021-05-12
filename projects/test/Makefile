@@ -10,11 +10,11 @@ BSCFLAGS_SYNTH = -bdir $(BUILD_DIR) -vdir $(BUILD_DIR) -simdir $(BUILD_DIR) -inf
 
 BSCFLAGS_BSIM = -bdir $(BSIM_DIR) -vdir $(BSIM_DIR) -simdir $(BSIM_DIR) -info-dir $(BSIM_DIR) -fdir $(BSIM_DIR) -D BSIM -l pthread
 
-BSIM_CPPFILES= ./cpp/main.cpp
+BSIM_CPPFILES= $(wildcard ./cpp/*.cpp)
 #$(ROOTDIR)/cpp/PcieBdpi.cpp \
 	$(ROOTDIR)/cpp/ShmFifo.cpp
 
-all: Top.bsv $(wildcard $(BSVPATH)/*.bsv) cpp/main.cpp
+all: cpp Top.bsv $(wildcard $(BSVPATH)/*.bsv)
 	rm -rf build
 	mkdir -p build
 	cd $(BUILD_DIR); apio init -b ulx3s-85f -p .
@@ -25,6 +25,9 @@ all: Top.bsv $(wildcard $(BSVPATH)/*.bsv) cpp/main.cpp
 	cp $(BSVPATH)/verilog/*.v build 
 	#cd build; apio verify 
 	cd build; apio build -v
+
+cpp: $(wildcard ./cpp/*.cpp) $(wildcard ./cpp/*.h)
+	cd cpp; make
 
 bsim: Top.bsv $(wildcard $(BSVPATH)/*.bsv) $(wildcard processor/*.bsv) cpp/main.cpp
 	mkdir -p $(BSIM_DIR)

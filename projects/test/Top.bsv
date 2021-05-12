@@ -104,7 +104,7 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 	Clock clk_target = pll.clk_100mhz;
 	
 	Reset rst_null = noReset();
-	UartIfc uart <- mkUart(2604, clocked_by clk_25mhz, reset_by rst_null);
+	UartIfc uart <- mkUart(217, clocked_by clk_25mhz, reset_by rst_null); //115200 baud on 25 mhz
 	SyncFIFOIfc#(Bit#(8)) serialToMainQ <- mkSyncFIFO(4,clk_25mhz, rst_null, clk_target);
 	SyncFIFOIfc#(Bit#(8)) mainToSerialQ <- mkSyncFIFO(4,clk_target, rst_target, clk_25mhz);
 

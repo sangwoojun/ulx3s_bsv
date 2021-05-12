@@ -6,11 +6,15 @@
 
 #include <queue>
 
+#include "ttyifc.h"
+
 pthread_mutex_t g_mutex;
 pthread_t g_thread;
 std::queue<uint8_t> sw2hwq;
 std::queue<uint8_t> hw2swq;
-int swmain();
+void* swmain(void* param);
+
+int tty_fd;
 
 bool g_init_done = false;
 void init() {
@@ -54,8 +58,14 @@ extern "C" void bdpiUartPut(uint32_t d) {
 }
 
 uint32_t uart_recv() {
-	init();
 	uint32_t r = 0xffffffff;
+#ifdef SYNTH
+	uint32_t din = 0;
+	int rdlen = read(tty_fd, &din, 1);
+	if ( rdlen > 0 ) r = din;
+	if ( rdlen > 1 ) printf( "received too many! %d\n", rdlen );
+#else
+	init();
 
 	pthread_mutex_lock(&g_mutex);
 	if ( !hw2swq.empty() ) {
@@ -63,19 +73,25 @@ uint32_t uart_recv() {
 		hw2swq.pop();
 	}
 	pthread_mutex_unlock(&g_mutex);
+#endif
 	return r;
 }
 void uart_send(uint8_t data) {
+#ifdef SYNTH
+	write(tty_fd, &data, sizeof(data));
+#else
 	init();
 
 	pthread_mutex_lock(&g_mutex);
 	sw2hwq.push(data);
 	pthread_mutex_unlock(&g_mutex);
+#endif
 }
 
 
-int swmain() {
-	float fd[3] = {0.2,4.8726, 1.12};
+void* swmain(void* param) {
+	//float fd[3] = {0.2,4.8726, 1.12};
+	float fd[3] = {1,2, 3};
 	uint32_t* fdi = (uint32_t*)fd;
 
 	for ( int i = 0; i < 3; i++ ) {
@@ -84,6 +100,7 @@ int swmain() {
 			uart_send(sval&0xff);
 		}
 	}
+	printf( "Sent all data\n" );
 
 	uint32_t ir = 0;
 	int fc = 3;
@@ -97,12 +114,22 @@ int swmain() {
 			printf( "%f\n", *(float*)&ir );
 		}
 
-
-
-
-
 	}
 
+}
 
+int
+main() {
+	char* ttyname = "/dev/ttyUSB0";
+	tty_fd = open(ttyname, O_RDWR | O_NOCTTY | O_SYNC);
+	if (tty_fd < 0) {
+		printf("Error opening TTY %s (%s)\n", ttyname, strerror(errno));
+		return 1;
+	}
+	set_tty_attributes(tty_fd, B115200);
 
+	int flags = fcntl(tty_fd, F_GETFL, 0);
+	fcntl(tty_fd, F_SETFL, flags | O_NONBLOCK);
+
+	swmain(NULL);
 }
