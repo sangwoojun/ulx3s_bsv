@@ -2,11 +2,11 @@ package PLL;
 
 interface PLLIfc;
 	interface Clock clk_125mhz;
-	interface Clock clk_250mhz;
+	interface Clock clk_100mhz;
 	interface Clock clk_25mhz;
 	interface Reset rst_25mhz;
 	interface Reset rst_125mhz;
-	interface Reset rst_250mhz;
+	interface Reset rst_100mhz;
 endinterface
 
 import "BVI" pll_fastclk =
@@ -18,10 +18,10 @@ module mkPllFast#(Clock clk) (PLLIfc);
 
 	output_clock clk_25mhz(clk_25mhz);
 	output_clock clk_125mhz(clk_125mhz);
-	output_clock clk_250mhz(clk_250mhz);
+	output_clock clk_100mhz(clk_100mhz);
 	output_reset rst_25mhz(lockedn) clocked_by(clk_25mhz);
 	output_reset rst_125mhz(lockedn) clocked_by(clk_125mhz);
-	output_reset rst_250mhz(lockedn) clocked_by(clk_250mhz);
+	output_reset rst_100mhz(lockedn) clocked_by(clk_100mhz);
 endmodule
 
 endpackage: PLL

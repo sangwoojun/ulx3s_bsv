@@ -75,30 +75,34 @@ void uart_send(uint8_t data) {
 
 
 int swmain() {
-	FILE* bin = fopen("sw/minisudoku.bin", "rb");
-	int byteoff = 0;
-	while(!feof(bin)) {
-		uint8_t din;
-		if ( !fread(&din, 1, 1, bin) ) continue;
-		if ( byteoff < 4096 ) {
-			uart_send(0); //imem write
-		} else {
-			uart_send(2); //dmem write 'b010
-			//printf( "Loading %x to %d\n", din, byteoff );
-		}
-		uart_send(din);
-		byteoff ++;
-	}
-	printf( "sent all data %d\n", byteoff ); fflush(stdout);
-	uart_send(1); // start processor
-	uart_send(1); // start processor
+	float fd[3] = {0.2,4.8726, 1.12};
+	uint32_t* fdi = (uint32_t*)fd;
 
+	for ( int i = 0; i < 3; i++ ) {
+		for ( int j = 3; j >= 0; j-- ) {
+			uint32_t sval = fdi[i]>>(j*8);
+			uart_send(sval&0xff);
+		}
+	}
+
+	uint32_t ir = 0;
+	int fc = 3;
 	while(true) {
 		uint32_t c = uart_recv();
 		if ( c > 0xff ) continue;
-		uint8_t cr = c;
+		ir = ir | (c<<(fc*8));
+		if ( fc > 0 ) fc--;
+		else {
+			fc = 3;
+			printf( "%f\n", *(float*)&ir );
+		}
 
-		//fprintf(stderr, "<%c:0x%x>", cr, cr );
-		fprintf(stderr, "%c", cr );
+
+
+
+
 	}
+
+
+
 }

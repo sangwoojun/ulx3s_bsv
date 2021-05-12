@@ -6,6 +6,7 @@ import BRAMSubWord::*;
 import PLL::*;
 
 import Mult18x18D::*;
+import SimpleFloat::*;
 
 interface HwMainIfc;
 	method ActionValue#(Bit#(8)) serial_tx;
@@ -24,20 +25,58 @@ module mkHwMain(HwMainIfc);
 
 	Mult18x18DIfc mult <- mkMult18x18D;
 
+	Reg#(Bit#(96)) floatInBuffer <- mkReg(0);
+	Reg#(Bit#(4)) floatInCnt <- mkReg(0);
+	FIFO#(Bit#(32)) addQ <- mkFIFO;
+	FloatTwoOp fmult <- mkFloatMult;
+	FloatTwoOp fadd <- mkFloatAdd;
+
 
 	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
 	Reg#(Bit#(8)) datbuf <- mkReg(0);
+
+
 	rule procUartIn;
 		Bit#(8) charin = serialrxQ.first();
 		serialrxQ.deq;
+
+		/*
 		let n = charin - 48;
 		datbuf <= n;
 		mult.put(zeroExtend(n), zeroExtend(datbuf));
+		*/
+		let nd = (floatInBuffer<<8)|zeroExtend(charin);
+		if ( floatInCnt == 11 ) begin
+			fmult.put(unpack(truncate(nd)), unpack(truncate(nd>>32)));
+			addQ.enq(truncate(nd>>64));
+			floatInCnt <= 0;
+			floatInBuffer <= 0;
+		end else begin
+			floatInCnt <= floatInCnt + 1;
+			floatInBuffer <= nd;
+		end
 	endrule
+	rule procAdd;
+		let nd_ <- fmult.get;
+		addQ.deq;
+		fadd.put(nd_, unpack(addQ.first));
+	endrule
+	Reg#(Bit#(32)) floatOut <- mkReg(0);
+	Reg#(Bit#(2)) floatOutCnt <- mkReg(0);
 	rule outputCnt;
-		let d <- mult.get;
-		serialtxQ.enq(truncate(d)+48);
+		if ( floatOutCnt == 0 ) begin
+			let nd_ <- fadd.get;
+			Bit#(32) nd = pack(nd_);
+			floatOut <= {nd[23:0],0};
+			serialtxQ.enq(nd[31:24]);
+			floatOutCnt <= 3;
+		end else begin
+			floatOutCnt <= floatOutCnt - 1;
+			Bit#(32) nd = floatOut;
+			floatOut <= {nd[23:0],0};
+			serialtxQ.enq(nd[31:24]);
+		end
 	endrule
 
 	method ActionValue#(Bit#(8)) serial_tx;
@@ -61,8 +100,8 @@ endinterface
 (* no_default_clock, no_default_reset*)
 module mkTop#(Clock clk_25mhz)(TopIfc);
 	PLLIfc pll <- mkPllFast(clk_25mhz);
-	Reset rst_target = pll.rst_125mhz;
-	Clock clk_target = pll.clk_125mhz;
+	Reset rst_target = pll.rst_100mhz;
+	Clock clk_target = pll.clk_100mhz;
 	
 	Reset rst_null = noReset();
 	UartIfc uart <- mkUart(2604, clocked_by clk_25mhz, reset_by rst_null);

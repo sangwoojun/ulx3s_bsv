@@ -2,7 +2,7 @@ module pll_fastclk(
 	input clki_25mhz, 
 	output clk_25mhz,
 	output clk_125mhz,
-	output clk_250mhz,
+	output clk_100mhz,
 	output lockedn
 	);
 wire clkfb;
@@ -18,9 +18,9 @@ EHXPLLL #(
 		.CLKOP_CPHASE(0),
 		.OUTDIVIDER_MUXA("DIVA"),
 		.CLKOP_ENABLE("ENABLED"),
-		.CLKOP_DIV(2),
+		.CLKOP_DIV(4),
 		.CLKOS_ENABLE("ENABLED"),
-		.CLKOS_DIV(4),
+		.CLKOS_DIV(5),
 		.CLKOS_CPHASE(0),
 		.CLKOS_FPHASE(0),
 		.CLKOS2_ENABLE("ENABLED"),
@@ -34,8 +34,8 @@ EHXPLLL #(
 	.CLKI(clki),
 	.CLKFB(clkfb),
 	.CLKINTFB(clkfb),
-	.CLKOP(clk_250mhz),
-	.CLKOS(clk_125mhz),
+	.CLKOP(clk_125mhz),
+	.CLKOS(clk_100mhz),
 	.CLKOS2(clk_25mhz),
 	.RST(1'b0),
 	.STDBY(1'b0),
