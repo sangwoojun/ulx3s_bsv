@@ -91,6 +91,62 @@ void uart_send(uint8_t data) {
 
 
 void* swmain(void* param) {
+
+	uart_send(0xff);
+	uart_send(0xbe);
+	uart_send(0xef);
+	uart_send(0);
+	uart_send(0);
+	uart_send(0);
+
+	uart_send(0xff);
+	uart_send(0xde);
+	uart_send(0xad);
+	uart_send(0);
+	uart_send(0);
+	uart_send(1);
+
+
+
+	uart_send(0);
+	uart_send(0xff);
+	uart_send(0xff);
+	uart_send(0);
+	uart_send(0);
+	uart_send(0);
+
+	uart_send(0);
+	uart_send(0xff);
+	uart_send(0xff);
+	uart_send(0);
+	uart_send(0);
+	uart_send(1);
+
+	printf( "Sent!\n" );
+
+	uint32_t inbuf = 0;
+	int inbufr = 1;
+	while(true) {
+		uint32_t c = uart_recv();
+		if ( c > 0xff ) continue;
+		inbuf = inbuf | (c<<(inbufr*8));
+		if ( inbufr > 0 ) inbufr--;
+		else {
+			inbufr = 1;
+			printf( "%x\n", inbuf );
+			inbuf = 0;
+			fflush(stdout);
+		}
+
+	}
+
+
+
+
+
+	exit(0);
+
+
 	//float fd[3] = {0.2,4.8726, 1.12};
 	float fd[3] = {1,40.161865, 6};
 	uint32_t* fdi = (uint32_t*)fd;

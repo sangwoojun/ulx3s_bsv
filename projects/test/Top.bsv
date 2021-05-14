@@ -15,40 +15,61 @@ interface HwMainIfc;
 
 endinterface
 
-module mkHwMain(HwMainIfc);
-	Reg#(Bool) processorStart <- mkReg(False);
-
+module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	Clock curclk <- exposeCurrentClock;
 	Reset currst <- exposeCurrentReset;
 
+	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
+	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
 
 
-	Reg#(Maybe#(Bit#(8))) serialCmd <- mkReg(tagged Invalid);
+	Reg#(Bit#(64)) sdramCmd <- mkReg(0);
+	Reg#(Bit#(8)) sdramCmdCnt <- mkReg(0);
+	rule procUartIn;
+		Bit#(8) charin = serialrxQ.first();
+		serialrxQ.deq;
+
+		let nd = (sdramCmd<<8)|zeroExtend(charin);
+		if ( sdramCmdCnt + 1 >= 6 ) begin
+			sdramCmdCnt <= 0;
+			sdramCmd <= 0;
+			Bit#(24) addr = truncate(nd);
+			Bit#(16) data = truncate(nd>>24);
+			Bool isWrite = (nd[40] == 1);
+			mem.req(addr,data,isWrite);
+			//$write("Req addr %x data %x write %s\n", addr, data, isWrite?"yes":"no");
+		end else begin
+			sdramCmd <= nd;
+			sdramCmdCnt <= sdramCmdCnt + 1;
+		end
+	endrule
+	Reg#(Bit#(8)) sdramReadOutBuf <- mkReg(0);
+	Reg#(Bool) sdramReadOutBuffered <- mkReg(False);
+	rule relaySdramread;
+		if ( sdramReadOutBuffered ) begin
+			serialtxQ.enq(sdramReadOutBuf);
+			sdramReadOutBuffered <= False;
+		end else begin
+			let d <- mem.readResp;
+			serialtxQ.enq(truncate(d>>8));
+			sdramReadOutBuf <= truncate(d);
+			sdramReadOutBuffered <= True;
+		end
+	endrule
 
 
-	Mult18x18DIfc mult <- mkMult18x18D;
 
+/*
 	Reg#(Bit#(96)) floatInBuffer <- mkReg(0);
 	Reg#(Bit#(4)) floatInCnt <- mkReg(0);
 	FIFO#(Bit#(32)) addQ <- mkFIFO;
 	FloatTwoOp fmult <- mkFloatMult;
 	FloatTwoOp fadd <- mkFloatAdd;
 
-
-	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
-	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
-	Reg#(Bit#(8)) datbuf <- mkReg(0);
-
-
 	rule procUartIn;
 		Bit#(8) charin = serialrxQ.first();
 		serialrxQ.deq;
 
-		/*
-		let n = charin - 48;
-		datbuf <= n;
-		mult.put(zeroExtend(n), zeroExtend(datbuf));
-		*/
 		let nd = (floatInBuffer<<8)|zeroExtend(charin);
 		if ( floatInCnt == 11 ) begin
 			fmult.put(unpack(truncate(nd)), unpack(truncate(nd>>32)));
@@ -83,6 +104,7 @@ module mkHwMain(HwMainIfc);
 			serialtxQ.enq(nd[31:24]);
 		end
 	endrule
+	*/
 
 	method ActionValue#(Bit#(8)) serial_tx;
 		serialtxQ.deq;
@@ -116,9 +138,9 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 	SyncFIFOIfc#(Bit#(8)) serialToMainQ <- mkSyncFIFO(4,clk_25mhz, rst_null, clk_target);
 	SyncFIFOIfc#(Bit#(8)) mainToSerialQ <- mkSyncFIFO(4,clk_target, rst_target, clk_25mhz);
 	
-	Ulx3sSdramIfc sdram <- mkUlx3sSdram(clocked_by clk_target, reset_by rst_target);
+	Ulx3sSdramIfc mem <- mkUlx3sSdram(pll.clk_100mhz, 100, clocked_by clk_target, reset_by rst_target);
 
-	HwMainIfc main <- mkHwMain(clocked_by clk_target, reset_by rst_target);
+	HwMainIfc main <- mkHwMain(mem.user, clocked_by clk_target, reset_by rst_target);
 
 	Reg#(Bit#(8)) uartInWord <- mkReg(0, clocked_by clk_25mhz, reset_by rst_null);
 	rule relayUartIn;
@@ -148,14 +170,18 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 	method Action ftdi_tx(Bit#(1) ftdi_txd);
 		uart.serial_rx(ftdi_txd);
 	endmethod
-	interface sdram_pins = sdram.pins;
+`ifndef BSIM
+	interface sdram_pins = mem.pins;
+`endif
 	method Bit#(8) led;
 		return uartInWord;
 	endmethod
 endmodule
 
 module mkTop_bsim(Empty);
-	HwMainIfc main <- mkHwMain;
+	Clock curclk <- exposeCurrentClock;
+	Ulx3sSdramIfc mem <- mkUlx3sSdram(curclk, 100);
+	HwMainIfc main <- mkHwMain(mem.user);
 	UartUserIfc uart <- mkUart_bsim;
 	rule relayUartIn;
 		let d <- uart.get;

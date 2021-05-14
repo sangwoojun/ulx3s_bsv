@@ -1,4 +1,5 @@
 module inout16 (
+	input wire clk,
 	inout wire [15:0] inout_pins,
 
 	input wire [15:0] write_data,

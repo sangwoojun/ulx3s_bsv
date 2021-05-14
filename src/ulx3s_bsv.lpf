@@ -222,8 +222,9 @@ IOBUF  PORT "usb_fpga_pu_dn" PULLMODE=NONE IO_TYPE=LVCMOS33 DRIVE=16;
 #IOBUF  PORT "jtag_tms" PULLMODE=UP IO_TYPE=LVCMOS33 DRIVE=4;
 
 ## SDRAM "ram" sheet
-LOCATE COMP "sdram_clk" SITE "F19";
-LOCATE COMP "sdram_cke" SITE "F20";
+LOCATE COMP "CLK_sdram_clk" SITE "F19";
+#LOCATE COMP "sdram_cke" SITE "F20";
+LOCATE COMP "CLK_GATE_sdram_clk" SITE "F20"; # bluespec gates this by default. no way to disable
 LOCATE COMP "sdram_csn" SITE "P20";
 LOCATE COMP "sdram_wen" SITE "T20";
 LOCATE COMP "sdram_rasn" SITE "R20";

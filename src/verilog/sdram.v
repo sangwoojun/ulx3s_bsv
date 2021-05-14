@@ -36,11 +36,11 @@ module sdram_pnru (
 	reg [23:0] ab;
 	reg rd, wr, ack;
 	always @(posedge sys_clk) begin
-	di <= sys_di;
-	ab <= sys_ab;
-	rd <= sys_rd;
-	wr <= sys_wr;
-	ack <= sys_ack;
+		di <= sys_di;
+		ab <= sys_ab;
+		rd <= sys_rd;
+		wr <= sys_wr;
+		ack <= sys_ack;
 	end
 	// wire di = sys_di;
 
@@ -84,35 +84,36 @@ module sdram_pnru (
 
 		case (state)
 
-			IDLE:   if (init) state <= (ctr==INITLEN) ? RFRSH1 : IDLE; // remain in idle for >100us at init
-			else begin
-			sys_rdy <= 1'b0;
-			if (ctr>=RFTIME) state <= RFRSH1;         // as needed, refresh a row
-			else if (rd|wr)  state <= RDWR;           // else respond to rd or wr request
-			else begin
-			sys_rdy <= 1'b1;
-			state <= IDLE;                                 // else do nothing
-			end
-			end
+			IDLE:   
+				if (init) state <= (ctr==INITLEN) ? RFRSH1 : IDLE; // remain in idle for >100us at init
+				else begin
+					sys_rdy <= 1'b0;
+					if (ctr>=RFTIME) state <= RFRSH1;         // as needed, refresh a row
+					else if (rd|wr)  state <= RDWR;           // else respond to rd or wr request
+					else begin
+						sys_rdy <= 1'b1;
+						state <= IDLE;                                 // else do nothing
+					end
+				end
 
 			RFRSH1: begin // prior to refresh, close all banks
-			sdr_cmd    <= PRECHRG;
-			sdr_ab[10] <= 1'b1;    // do all banks
-			open       <= 4'b000;
-			dly <= tRP-2; next <= (init) ? CONFIG : RFRSH2; // insert config step during init
+				sdr_cmd    <= PRECHRG;
+				sdr_ab[10] <= 1'b1;    // do all banks
+				open       <= 4'b000;
+				dly <= tRP-2; next <= (init) ? CONFIG : RFRSH2; // insert config step during init
 			end
 
 			RFRSH2: begin // refresh one row, then return to IDLE
-			sdr_cmd <= AUTORFRSH;
-			sdr_dqm <= 2'b00;     // end init
-			ctr     <= 0;         // reset timeout
-			dly <= tRC-2; next <= (init) ? RFRSH2 : IDLE;  // repeat AUTORFRSH during init
+				sdr_cmd <= AUTORFRSH;
+				sdr_dqm <= 2'b00;     // end init
+				ctr     <= 0;         // reset timeout
+				dly <= tRC-2; next <= (init) ? RFRSH2 : IDLE;  // repeat AUTORFRSH during init
 			end
 
 			CONFIG: begin // load the mode register
-			sdr_cmd <= MODESET;
-			sdr_ab  <= MODE;
-			dly <= tMRD-2; next <= RFRSH2;
+				sdr_cmd <= MODESET;
+				sdr_ab  <= MODE;
+				dly <= tMRD-2; next <= RFRSH2;
 			end
 
 			RDWR:   begin // issue read or write command
@@ -138,9 +139,9 @@ module sdram_pnru (
 			end
 
 			RWRDY:  begin // latch read result, or write data
-			sys_rdy <= 1'b1;
-			if (rd) sys_do  <= sdr_db;
-			state <= ACKWT;
+				sys_rdy <= 1'b1;
+				if (rd) sys_do  <= sdr_db;
+				state <= ACKWT;
 			end
 
 			ACKWT:  // wait for system to end current r/w cycle

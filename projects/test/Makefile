@@ -10,11 +10,11 @@ BSCFLAGS_SYNTH = -bdir $(BUILD_DIR) -vdir $(BUILD_DIR) -simdir $(BUILD_DIR) -inf
 
 BSCFLAGS_BSIM = -bdir $(BSIM_DIR) -vdir $(BSIM_DIR) -simdir $(BSIM_DIR) -info-dir $(BSIM_DIR) -fdir $(BSIM_DIR) -D BSIM -l pthread
 
-BSIM_CPPFILES= $(wildcard ./cpp/*.cpp)
+BSIM_CPPFILES= $(wildcard ./cpp/*.cpp) $(wildcard ../../src/cpp/*.cpp)
 #$(ROOTDIR)/cpp/PcieBdpi.cpp \
 	$(ROOTDIR)/cpp/ShmFifo.cpp
 
-all: cpp Top.bsv $(wildcard $(BSVPATH)/*.bsv)
+all: cpp Top.bsv $(wildcard $(BSVPATH)/*.bsv) $(wildcard ./cpp/*.cpp) $(wildcard ../../src/cpp/*.cpp)
 	rm -rf build
 	mkdir -p build
 	cd $(BUILD_DIR); apio init -b ulx3s-85f -p .
