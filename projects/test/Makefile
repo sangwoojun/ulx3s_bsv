@@ -23,6 +23,7 @@ all: cpp Top.bsv $(wildcard $(BSVPATH)/*.bsv)
 	cp $(BSVPATH)/*.lpf build
 	cp $(BSVPATH)/bsv_verilog/*.v build 
 	cp $(BSVPATH)/verilog/*.v build 
+	bash replace_inout_token.sh
 	#cd build; apio verify 
 	cd build; apio build -v
 

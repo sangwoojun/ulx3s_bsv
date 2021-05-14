@@ -23,8 +23,8 @@ void set_tty_attributes(int fd, int baud)
 
 	tty.c_oflag &= ~OPOST;
 
-	tty.c_cc[VMIN] = 1;
-	tty.c_cc[VTIME] = 1;
+	tty.c_cc[VMIN] = 0;
+	tty.c_cc[VTIME] = 0;
 
 	if (tcsetattr(fd, TCSANOW, &tty) != 0) {
 		printf("tcsetattr error: %s\n", strerror(errno));

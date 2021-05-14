@@ -63,7 +63,7 @@ uint32_t uart_recv() {
 	uint32_t din = 0;
 	int rdlen = read(tty_fd, &din, 1);
 	if ( rdlen > 0 ) r = din;
-	if ( rdlen > 1 ) printf( "received too many! %d\n", rdlen );
+	if ( rdlen > 1 ) printf( "received too many bytes from uart! %d\n", rdlen );
 #else
 	init();
 
@@ -79,6 +79,7 @@ uint32_t uart_recv() {
 void uart_send(uint8_t data) {
 #ifdef SYNTH
 	write(tty_fd, &data, sizeof(data));
+	tcdrain(tty_fd);
 #else
 	init();
 
@@ -91,7 +92,7 @@ void uart_send(uint8_t data) {
 
 void* swmain(void* param) {
 	//float fd[3] = {0.2,4.8726, 1.12};
-	float fd[3] = {1,2, 3};
+	float fd[3] = {1,40.161865, 6};
 	uint32_t* fdi = (uint32_t*)fd;
 
 	for ( int i = 0; i < 3; i++ ) {
@@ -128,8 +129,10 @@ main() {
 	}
 	set_tty_attributes(tty_fd, B115200);
 
+	/* // not necessary since VMIN and VTIME set to zero...?
 	int flags = fcntl(tty_fd, F_GETFL, 0);
 	fcntl(tty_fd, F_SETFL, flags | O_NONBLOCK);
+	*/
 
 	swmain(NULL);
 }

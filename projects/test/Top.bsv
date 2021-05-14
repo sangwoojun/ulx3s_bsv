@@ -4,6 +4,7 @@ import FIFO::*;
 import Uart::*;
 import BRAMSubWord::*;
 import PLL::*;
+import Sdram::*;
 
 import Mult18x18D::*;
 import SimpleFloat::*;
@@ -11,6 +12,7 @@ import SimpleFloat::*;
 interface HwMainIfc;
 	method ActionValue#(Bit#(8)) serial_tx;
 	method Action serial_rx(Bit#(8) rx);
+
 endinterface
 
 module mkHwMain(HwMainIfc);
@@ -18,6 +20,7 @@ module mkHwMain(HwMainIfc);
 
 	Clock curclk <- exposeCurrentClock;
 	Reset currst <- exposeCurrentReset;
+
 
 
 	Reg#(Maybe#(Bit#(8))) serialCmd <- mkReg(tagged Invalid);
@@ -62,11 +65,13 @@ module mkHwMain(HwMainIfc);
 		addQ.deq;
 		fadd.put(nd_, unpack(addQ.first));
 	endrule
+
 	Reg#(Bit#(32)) floatOut <- mkReg(0);
 	Reg#(Bit#(2)) floatOutCnt <- mkReg(0);
 	rule outputCnt;
 		if ( floatOutCnt == 0 ) begin
 			let nd_ <- fadd.get;
+			//let nd_ <- fmult.get;
 			Bit#(32) nd = pack(nd_);
 			floatOut <= {nd[23:0],0};
 			serialtxQ.enq(nd[31:24]);
@@ -95,6 +100,9 @@ interface TopIfc;
 	method Action ftdi_tx(Bit#(1) ftdi_txd);
 	(* always_enabled, always_ready, prefix = "", result = "led" *)
 	method Bit#(8) led;
+	
+	(* always_ready, prefix = "" *)
+	interface Ulx3sSdramPinsIfc sdram_pins; 
 endinterface
 
 (* no_default_clock, no_default_reset*)
@@ -107,6 +115,8 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 	UartIfc uart <- mkUart(217, clocked_by clk_25mhz, reset_by rst_null); //115200 baud on 25 mhz
 	SyncFIFOIfc#(Bit#(8)) serialToMainQ <- mkSyncFIFO(4,clk_25mhz, rst_null, clk_target);
 	SyncFIFOIfc#(Bit#(8)) mainToSerialQ <- mkSyncFIFO(4,clk_target, rst_target, clk_25mhz);
+	
+	Ulx3sSdramIfc sdram <- mkUlx3sSdram(clocked_by clk_target, reset_by rst_target);
 
 	HwMainIfc main <- mkHwMain(clocked_by clk_target, reset_by rst_target);
 
@@ -130,17 +140,6 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 		uart.user.send(mainToSerialQ.first);
 	endrule
 
-	/*
-	Reg#(Bit#(32)) clkcount <- mkReg(0, clocked_by clk_25mhz, reset_by rst_null);
-	Reg#(Bit#(8)) secondcount <- mkReg(0, clocked_by clk_25mhz, reset_by rst_null); 
-	rule incclk;
-		if ( clkcount >= 25000000 ) begin
-			clkcount <= 0;
-			secondcount <= secondcount + 1;
-		end
-		else clkcount <= clkcount + 1;
-	endrule
-	*/
 
 
 	method Bit#(1) ftdi_rxd;
@@ -149,6 +148,7 @@ module mkTop#(Clock clk_25mhz)(TopIfc);
 	method Action ftdi_tx(Bit#(1) ftdi_txd);
 		uart.serial_rx(ftdi_txd);
 	endmethod
+	interface sdram_pins = sdram.pins;
 	method Bit#(8) led;
 		return uartInWord;
 	endmethod
