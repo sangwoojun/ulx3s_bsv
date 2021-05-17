@@ -68,7 +68,7 @@ FC_Result recv_result() {
 
 
 void* swmain(void* param) {
-	int input_cnt = 32;
+	int input_cnt = 64;
 	int output_dim = 64;
 	int input_dim = 1024;
 	float* weights = (float*)malloc(sizeof(float)*input_dim*output_dim);
@@ -76,7 +76,9 @@ void* swmain(void* param) {
 	float* answer = (float*)malloc(sizeof(float)*output_dim*input_cnt);
 	nn_fc(weights, inputs, input_cnt, input_dim, output_dim, answer);
 	printf( "Done!" );
+	fflush(stdout);
 
+	exit(0);
 	return NULL;
 }
 

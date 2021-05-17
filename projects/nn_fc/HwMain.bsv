@@ -9,10 +9,12 @@ import Sdram::*;
 import Mult18x18D::*;
 import SimpleFloat::*;
 
+import NnFc::*;
+
+
 interface HwMainIfc;
 	method ActionValue#(Bit#(8)) serial_tx;
 	method Action serial_rx(Bit#(8) rx);
-
 endinterface
 
 module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
@@ -22,7 +24,57 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
 
+	NnFcIfc nn <- mkNnFc;
 
+	Reg#(Maybe#(Bit#(8))) inputDst <- mkReg(tagged Invalid);
+	rule recvInputDst(!isValid(inputDst));
+		Bit#(8) charin = serialrxQ.first();
+		serialrxQ.deq;
+		inputDst <= tagged Valid charin;
+	endrule
+	Reg#(Bit#(32)) inputBuffer <- mkReg(0);
+	Reg#(Bit#(2)) inputBufferCnt <- mkReg(0);
+	Reg#(Bit#(24)) memWriteOffset <- mkReg(0);
+	rule recvInputFloat(isValid(inputDst));
+		Bit#(8) charin = serialrxQ.first();
+		serialrxQ.deq;
+		Bit#(32) nv = (inputBuffer>>8)|(zeroExtend(charin)<<24);
+		inputBuffer <= nv;
+
+		if ( inputBufferCnt == 3 ) begin
+			inputBufferCnt <= 0;
+			inputDst <= tagged Invalid;
+			let id = fromMaybe(?,inputDst);
+			if ( id != 8'hff ) begin
+				nn.dataIn(unpack(nv), id);
+			end else begin
+				// write to mem
+				//$write( "Writing %x to mem %d\n", nv, memWriteOffset );
+				memWriteOffset <= memWriteOffset + 1;
+			end
+		end else begin
+			inputBufferCnt <= inputBufferCnt + 1;
+		end
+	endrule
+
+	Reg#(Bit#(40)) outputBuffer <- mkReg(0); // {float,outidx}, inidx is sent immediately
+	Reg#(Bit#(3)) outputBufferCnt <- mkReg(0);
+	rule serializeOutput;
+		if ( outputBufferCnt > 0 ) begin
+			outputBufferCnt <= outputBufferCnt - 1;
+			serialtxQ.enq(truncate(outputBuffer));
+			outputBuffer <= (outputBuffer>>8);
+		end else begin
+			//$write( "Getting result data out\n" );
+			let r <- nn.dataOut;
+			serialtxQ.enq(tpl_3(r));
+			outputBuffer <= {pack(tpl_1(r)),tpl_2(r)};
+			outputBufferCnt <= 5;
+		end
+	endrule
+
+
+/*
 	Reg#(Bit#(64)) sdramCmd <- mkReg(0);
 	Reg#(Bit#(8)) sdramCmdCnt <- mkReg(0);
 	rule procUartIn;
@@ -56,6 +108,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			sdramReadOutBuffered <= True;
 		end
 	endrule
+	*/
 
 
 

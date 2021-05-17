@@ -23,10 +23,15 @@ void nn_fc(float* matrix, float* input, int input_cnt, int input_dim, int output
 			while (res.valid) {
 				answer[res.input_idx*output_dim + res.output_idx] = res.value;
 				done_cnt++;
+				printf( "Writing to mem %d\n", done_cnt );
+				fflush(stdout);
 				res = recv_result();
 			}
 		}
 	}
+	printf( "Finished sending all data\n" );
+	fflush(stdout);
+
 	while (done_cnt < output_dim*input_cnt) {
 		FC_Result res = recv_result();
 		if ( !res.valid ) continue;
