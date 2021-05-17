@@ -20,6 +20,11 @@ endinterface
 module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	Clock curclk <- exposeCurrentClock;
 	Reset currst <- exposeCurrentReset;
+	
+	Reg#(Bit#(32)) cycleCount <- mkReg(0);
+	rule incCycleCount;
+		cycleCount <= cycleCount + 1;
+	endrule
 
 	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
@@ -34,7 +39,9 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	endrule
 	Reg#(Bit#(32)) inputBuffer <- mkReg(0);
 	Reg#(Bit#(2)) inputBufferCnt <- mkReg(0);
-	Reg#(Bit#(24)) memWriteOffset <- mkReg(0);
+	//Reg#(Bit#(24)) memWriteOffset <- mkReg(0);
+	Reg#(Bool) memWriteDone <- mkReg(False);
+	FIFO#(Bit#(32)) memWriteQ <- mkFIFO;
 	rule recvInputFloat(isValid(inputDst));
 		Bit#(8) charin = serialrxQ.first();
 		serialrxQ.deq;
@@ -47,10 +54,12 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			let id = fromMaybe(?,inputDst);
 			if ( id != 8'hff ) begin
 				nn.dataIn(unpack(nv), id);
+				memWriteDone <= True;
 			end else begin
+				memWriteQ.enq(nv);
 				// write to mem
 				//$write( "Writing %x to mem %d\n", nv, memWriteOffset );
-				memWriteOffset <= memWriteOffset + 1;
+				//memWriteOffset <= memWriteOffset + 1;
 			end
 		end else begin
 			inputBufferCnt <= inputBufferCnt + 1;
@@ -59,105 +68,65 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 
 	Reg#(Bit#(40)) outputBuffer <- mkReg(0); // {float,outidx}, inidx is sent immediately
 	Reg#(Bit#(3)) outputBufferCnt <- mkReg(0);
+	Reg#(Bit#(32)) resultDataCount <- mkReg(0);
+	Reg#(Bit#(32)) lastCycle <- mkReg(0);
+	Reg#(Bit#(32)) lastEmitted <- mkReg(0);
 	rule serializeOutput;
 		if ( outputBufferCnt > 0 ) begin
 			outputBufferCnt <= outputBufferCnt - 1;
 			serialtxQ.enq(truncate(outputBuffer));
 			outputBuffer <= (outputBuffer>>8);
 		end else begin
-			//$write( "Getting result data out\n" );
+			if ( (resultDataCount&32'hff) == 0 ) begin
+				lastCycle <= cycleCount;
+				lastEmitted <= resultDataCount;
+			end
+			else if (((resultDataCount + 1)&32'hff) == 0 ) begin
+				$write( "Emitting %d elements over %d cycles\n", resultDataCount-lastEmitted, cycleCount-lastCycle );
+			end
+			resultDataCount <= resultDataCount + 1;
 			let r <- nn.dataOut;
-			serialtxQ.enq(tpl_3(r));
-			outputBuffer <= {pack(tpl_1(r)),tpl_2(r)};
+			serialtxQ.enq(tpl_2(r)); // input idx first
+			outputBuffer <= {pack(tpl_1(r)),tpl_3(r)};
 			outputBufferCnt <= 5;
 		end
 	endrule
 
 
-/*
-	Reg#(Bit#(64)) sdramCmd <- mkReg(0);
-	Reg#(Bit#(8)) sdramCmdCnt <- mkReg(0);
-	rule procUartIn;
-		Bit#(8) charin = serialrxQ.first();
-		serialrxQ.deq;
 
-		let nd = (sdramCmd<<8)|zeroExtend(charin);
-		if ( sdramCmdCnt + 1 >= 6 ) begin
-			sdramCmdCnt <= 0;
-			sdramCmd <= 0;
-			Bit#(24) addr = truncate(nd);
-			Bit#(16) data = truncate(nd>>24);
-			Bool isWrite = (nd[40] == 1);
-			mem.req(addr,data,isWrite);
-			//$write("Req addr %x data %x write %s\n", addr, data, isWrite?"yes":"no");
+	Reg#(Maybe#(Bit#(16))) memWriteBuffer <- mkReg(tagged Invalid);
+	Reg#(Bit#(24)) memWriteAddr <- mkReg(0);
+	rule procMemWrite;
+		if ( isValid(memWriteBuffer) ) begin
+			memWriteBuffer <= tagged Invalid;
+			mem.req(memWriteAddr,fromMaybe(?,memWriteBuffer),True);
 		end else begin
-			sdramCmd <= nd;
-			sdramCmdCnt <= sdramCmdCnt + 1;
+			memWriteQ.deq;
+			let d = memWriteQ.first;
+			mem.req(memWriteAddr,truncate(d),True);
+			memWriteBuffer <= tagged Valid truncate(d>>16);
+		end
+		memWriteAddr <= memWriteAddr + 1;
+	endrule
+
+	Reg#(Bit#(24)) memReadAddr <- mkReg(0);
+	(* descending_urgency = "procMemWrite, procMemRead" *)
+	rule procMemRead (memWriteDone);
+		if ( memReadAddr + 1 == memWriteAddr ) memReadAddr <= 0;
+		else memReadAddr <= memReadAddr + 1;
+		mem.req(memReadAddr,?,False);
+	endrule
+
+	Reg#(Maybe#(Bit#(16))) memReadBuffer <- mkReg(tagged Invalid);
+	rule procMemReadResp;
+		let d <- mem.readResp;
+		if ( isValid(memReadBuffer) ) begin
+			nn.weightIn(unpack({d,fromMaybe(?,memReadBuffer)}));
+			memReadBuffer <= tagged Invalid;
+		end else begin
+			memReadBuffer <= tagged Valid d;
 		end
 	endrule
-	Reg#(Bit#(8)) sdramReadOutBuf <- mkReg(0);
-	Reg#(Bool) sdramReadOutBuffered <- mkReg(False);
-	rule relaySdramread;
-		if ( sdramReadOutBuffered ) begin
-			serialtxQ.enq(sdramReadOutBuf);
-			sdramReadOutBuffered <= False;
-		end else begin
-			let d <- mem.readResp;
-			serialtxQ.enq(truncate(d>>8));
-			sdramReadOutBuf <= truncate(d);
-			sdramReadOutBuffered <= True;
-		end
-	endrule
-	*/
-
-
-
-/*
-	Reg#(Bit#(96)) floatInBuffer <- mkReg(0);
-	Reg#(Bit#(4)) floatInCnt <- mkReg(0);
-	FIFO#(Bit#(32)) addQ <- mkFIFO;
-	FloatTwoOp fmult <- mkFloatMult;
-	FloatTwoOp fadd <- mkFloatAdd;
-
-	rule procUartIn;
-		Bit#(8) charin = serialrxQ.first();
-		serialrxQ.deq;
-
-		let nd = (floatInBuffer<<8)|zeroExtend(charin);
-		if ( floatInCnt == 11 ) begin
-			fmult.put(unpack(truncate(nd)), unpack(truncate(nd>>32)));
-			addQ.enq(truncate(nd>>64));
-			floatInCnt <= 0;
-			floatInBuffer <= 0;
-		end else begin
-			floatInCnt <= floatInCnt + 1;
-			floatInBuffer <= nd;
-		end
-	endrule
-	rule procAdd;
-		let nd_ <- fmult.get;
-		addQ.deq;
-		fadd.put(nd_, unpack(addQ.first));
-	endrule
-
-	Reg#(Bit#(32)) floatOut <- mkReg(0);
-	Reg#(Bit#(2)) floatOutCnt <- mkReg(0);
-	rule outputCnt;
-		if ( floatOutCnt == 0 ) begin
-			let nd_ <- fadd.get;
-			//let nd_ <- fmult.get;
-			Bit#(32) nd = pack(nd_);
-			floatOut <= {nd[23:0],0};
-			serialtxQ.enq(nd[31:24]);
-			floatOutCnt <= 3;
-		end else begin
-			floatOutCnt <= floatOutCnt - 1;
-			Bit#(32) nd = floatOut;
-			floatOut <= {nd[23:0],0};
-			serialtxQ.enq(nd[31:24]);
-		end
-	endrule
-	*/
 
 	method ActionValue#(Bit#(8)) serial_tx;
 		serialtxQ.deq;

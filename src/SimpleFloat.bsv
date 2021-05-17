@@ -46,14 +46,12 @@ module mkFloatMult(FloatTwoOp);
 			newfrac = truncate(mres>>16);
 			newexp = truncate(expsum-127);
 		end
-		$write( "Doing fmult\n" );
 
 		
 		if ( isZero ) outQ.enq(0);
 		else outQ.enq({sign,newexp,newfrac,0});
 	endrule
 	method Action put(Float a, Float b);
-		$write( "Putting fmult req\n" );
 		Bit#(32) bina = pack(a);
 		Bit#(32) binb = pack(b);
 		Bit#(18) fraca = zeroExtend(bina[22:6])|(1<<17);

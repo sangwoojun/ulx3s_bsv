@@ -68,15 +68,51 @@ FC_Result recv_result() {
 
 
 void* swmain(void* param) {
-	int input_cnt = 64;
-	int output_dim = 64;
+	srand(time(NULL));
+	int input_cnt = 32;
+	int output_dim = 32;
 	int input_dim = 1024;
 	float* weights = (float*)malloc(sizeof(float)*input_dim*output_dim);
+	for ( int i = 0; i < input_dim*output_dim; i++ ) {
+		weights[i] = 0;
+		if ( rand()%4 == 0 ) {
+			weights[i] = ((float)(rand()%10000))/1000;
+		}
+	}
 	float* inputs = (float*)malloc(sizeof(float)*input_dim*input_cnt);
+	for ( int i = 0; i < input_dim*input_cnt; i++ ) {
+		inputs[i] = 0;
+		if ( rand()%4 == 0 ) {
+			inputs[i] = ((float)(rand()%10000))/1000;
+		}
+	}
 	float* answer = (float*)malloc(sizeof(float)*output_dim*input_cnt);
+	float* answergolden = (float*)malloc(sizeof(float)*output_dim*input_cnt);
+	for ( int i = 0; i < input_cnt; i++ ) {
+		for ( int j = 0; j < output_dim; j++ ) {
+			answergolden[i*output_dim+j] = 0;
+			for ( int k = 0; k < input_dim; k++ ) {
+				answergolden[i*output_dim+j] += weights[j*input_dim+k]*inputs[i*input_dim+k];
+			}
+		}
+	}
 	nn_fc(weights, inputs, input_cnt, input_dim, output_dim, answer);
-	printf( "Done!" );
+	printf( "Compute done!" );
 	fflush(stdout);
+
+	printf( "Comparing results...\n" );
+	float diffsum = 0;
+	for ( int i = 0; i < input_cnt*output_dim; i++ ) {
+		float diff = answer[i] - answergolden[i];
+		if ( diff < 0 ) diff = -diff;
+		if ( diff > 1 ) {
+			printf( "Error larger than 1 at %d! %f (%f vs %f)\n", i, diff, answer[i], answergolden[i] );
+		}
+		diffsum += diff;
+	}
+	printf( "Compare done! Average diff %f\n", diffsum/(input_cnt*output_dim) );
+	fflush(stdout);
+
 
 	exit(0);
 	return NULL;
