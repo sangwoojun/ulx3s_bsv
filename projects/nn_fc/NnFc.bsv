@@ -18,7 +18,7 @@ typedef 3 PeWaysLog;
 typedef TExp#(PeWaysLog) PeWays;
 
 Integer inputDim = 1024;
-Integer outputDim = 32;
+Integer outputDim = 64;
 
 module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 	Reg#(Bit#(32)) cycleCount <- mkReg(0);

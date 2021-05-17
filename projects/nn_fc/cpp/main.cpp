@@ -69,8 +69,8 @@ FC_Result recv_result() {
 
 void* swmain(void* param) {
 	srand(time(NULL));
-	int input_cnt = 32;
-	int output_dim = 32;
+	int input_cnt = 16;
+	int output_dim = 64;
 	int input_dim = 1024;
 	float* weights = (float*)malloc(sizeof(float)*input_dim*output_dim);
 	for ( int i = 0; i < input_dim*output_dim; i++ ) {
