@@ -102,7 +102,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 
 
-	FIFO#(Float) weightInQ <- mkSizedBRAMFIFO(1024);
+	FIFO#(Float) weightInQ <- mkSizedFIFO(8);
 	rule relayWeightIn;
 		weightInQ.deq;
 		weightQ.enq(weightInQ.first);
@@ -148,7 +148,7 @@ module mkNnFc(NnFcIfc);
 			end
 		
 			weightInIdx <= weightInIdx + 1;
-			Bit#(PeWaysLog) target = truncate(weightInIdx>>10);
+			Bit#(PeWaysLog) target = truncate(weightInIdx);
 			if ( target == fromInteger(i) ) begin
 				//$write( "Weight in %d\n", target );
 				pes[i].putWeight(w);

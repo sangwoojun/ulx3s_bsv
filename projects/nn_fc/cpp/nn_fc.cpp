@@ -9,10 +9,11 @@ void nn_fc(float* matrix, float* input, int input_cnt, int input_dim, int output
 
 	int pe_ways = 8;
 
-
-	for ( int i = 0; i < output_dim; i++ ) {
+	for ( int i = 0; i < output_dim/pe_ways; i++ ) {
 		for ( int j = 0; j < input_dim; j++ ) {
-			send_weight(matrix[i*input_dim + j]);
+			for ( int k = 0; k < pe_ways; k++ ) {
+				send_weight(matrix[(i*pe_ways+k)*input_dim + j]);
+			}
 		}
 	}
 
