@@ -77,12 +77,14 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			serialtxQ.enq(truncate(outputBuffer));
 			outputBuffer <= (outputBuffer>>8);
 		end else begin
-			if ( (resultDataCount&32'hff) == 0 ) begin
+			if ( resultDataCount == 0 ) begin
 				lastCycle <= cycleCount;
 				lastEmitted <= resultDataCount;
 			end
 			else if (((resultDataCount + 1)&32'hff) == 0 ) begin
 				$write( "Emitting %d elements over %d cycles\n", resultDataCount-lastEmitted, cycleCount-lastCycle );
+				lastCycle <= cycleCount;
+				lastEmitted <= resultDataCount;
 			end
 			resultDataCount <= resultDataCount + 1;
 			let r <- nn.dataOut;

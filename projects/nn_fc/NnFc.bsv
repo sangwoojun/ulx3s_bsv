@@ -41,7 +41,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	Reg#(Bit#(8)) lastInputIdx <- mkReg(0);
 	Reg#(Bit#(8)) curOutputIdx <- mkReg(zeroExtend(peIdx));
-	Reg#(Bit#(16)) curMacIdx <- mkReg(0);
+	Reg#(Bit#(32)) curMacIdx <- mkReg(0);
 	rule enqMac;
 		inputQ.deq;
 		Float inf = tpl_1(inputQ.first);
@@ -49,7 +49,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		weightQ.deq;
 		Float wf = weightQ.first;
 
-		partialSumIdxQ1.enq(tuple3(ini,curOutputIdx,curMacIdx));
+		partialSumIdxQ1.enq(tuple3(ini,curOutputIdx,truncate(curMacIdx)));
 		if ( curMacIdx + 1 >= fromInteger(inputDim) ) begin
 			curMacIdx <= 0;
 			let nextOutIdx = curOutputIdx + fromInteger(valueOf(PeWays));
@@ -102,7 +102,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 
 
-	FIFO#(Float) weightInQ <- mkSizedFIFO(8);
+	FIFO#(Float) weightInQ <- mkFIFO;
 	rule relayWeightIn;
 		weightInQ.deq;
 		weightQ.enq(weightInQ.first);
