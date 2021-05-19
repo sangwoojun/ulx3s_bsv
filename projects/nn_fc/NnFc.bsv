@@ -64,7 +64,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		fmult.put(inf, wf);
 		
 		if ( curMacIdx == 0 ) begin
-			addForwardQ.enq(unpack(1<<24)); // float '1'
+			addForwardQ.enq(unpack(0)); // float '0'
 		end else begin
 			partialSumQ2.deq;
 			addForwardQ.enq(partialSumQ2.first);
