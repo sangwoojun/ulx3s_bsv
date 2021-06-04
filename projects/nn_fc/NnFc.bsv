@@ -34,14 +34,15 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 	FloatTwoOp fmult <- mkFloatMult;
 	FloatTwoOp fadd <- mkFloatAdd;
 	FIFO#(Float) addForwardQ <- mkSizedFIFO(4);
+	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ3 <- mkFIFO1;
 	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ2 <- mkSizedBRAMFIFO(64);
-	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ1 <- mkFIFO;
+	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ1 <- mkFIFO1;
 	FIFO#(Float) partialSumQ <- mkSizedBRAMFIFO(64);
 	FIFO#(Float) partialSumQ2 <- mkFIFO;
 
 	Reg#(Bit#(8)) lastInputIdx <- mkReg(0);
 	Reg#(Bit#(8)) curOutputIdx <- mkReg(zeroExtend(peIdx));
-	Reg#(Bit#(32)) curMacIdx <- mkReg(0);
+	Reg#(Bit#(12)) curMacIdx <- mkReg(0);
 	rule enqMac;
 		inputQ.deq;
 		Float inf = tpl_1(inputQ.first);
@@ -49,7 +50,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		weightQ.deq;
 		Float wf = weightQ.first;
 
-		partialSumIdxQ1.enq(tuple3(ini,curOutputIdx,truncate(curMacIdx)));
+		partialSumIdxQ1.enq(tuple3(ini,curOutputIdx,zeroExtend(curMacIdx)));
 		if ( curMacIdx + 1 >= fromInteger(inputDim) ) begin
 			curMacIdx <= 0;
 			let nextOutIdx = curOutputIdx + fromInteger(valueOf(PeWays));
@@ -87,9 +88,14 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		partialSumIdxQ1.deq;
 		partialSumIdxQ2.enq(partialSumIdxQ1.first);
 	endrule
-	rule filterDoneResults;
+	rule relayPartialIdx2;
 		partialSumIdxQ2.deq;
-		let psi = partialSumIdxQ2.first;
+		partialSumIdxQ3.enq(partialSumIdxQ2.first);
+	endrule
+	rule filterDoneResults;
+		partialSumIdxQ3.deq;
+		let psi = partialSumIdxQ3.first;
+
 		partialSumQ.deq;
 		let ps = partialSumQ.first;
 		if (tpl_3(psi)+1 == fromInteger(inputDim) ) begin
@@ -130,6 +136,7 @@ interface NnFcIfc;
 	method ActionValue#(Tuple3#(Float, Bit#(8), Bit#(8))) dataOut;
 endinterface
 
+(* synthesize *)
 module mkNnFc(NnFcIfc);
 	Vector#(PeWays, MacPeIfc) pes;
 	Vector#(PeWays, FIFO#(Float)) weightInQs <- replicateM(mkFIFO);

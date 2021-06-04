@@ -6,9 +6,6 @@
 // for efficiency with the 18x18D multipliers on the ECP5
 // Subnormal numbers are ignored
 // NaN, Inf, etc are all ignored
-// 
-// TODO: Currently adders use FIFOs between pipeline stages.
-// TODO: Should change to pipeline registers for efficiency
 ////////////////////////////////////////////////////////////////////////////////
 
 
@@ -73,15 +70,15 @@ endmodule
 typedef struct {Bit#(18) frac;Bit#(8) expo;Bit#(1) sign;} FloatParts deriving (Bits,Eq);
 
 module mkFloatAdd(FloatTwoOp);
-	FIFO#(Tuple2#(Bit#(32),Bit#(32))) inQ <- mkFIFO;
-	FIFO#(Tuple4#(Bool,Bit#(8),FloatParts,FloatParts)) inProcQ <- mkFIFO;
-	FIFO#(Tuple3#(Bool,FloatParts,FloatParts)) calcQ <- mkFIFO;
-	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ <- mkFIFO;
-	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ1 <- mkFIFO;
-	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ2 <- mkFIFO;
-	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ3 <- mkFIFO;
-	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ4 <- mkFIFO;
-	FIFO#(Bit#(32)) outQ <- mkFIFO;
+	FIFO#(Tuple2#(Bit#(32),Bit#(32))) inQ <- mkFIFO1;
+	FIFO#(Tuple4#(Bool,Bit#(8),FloatParts,FloatParts)) inProcQ <- mkFIFO1;
+	FIFO#(Tuple3#(Bool,FloatParts,FloatParts)) calcQ <- mkFIFO1;
+	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ <- mkFIFO1;
+	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ1 <- mkFIFO1;
+	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ2 <- mkFIFO1;
+	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ3 <- mkFIFO1;
+	FIFO#(Tuple3#(Bit#(1),Bit#(8),Bit#(19))) normalizeQ4 <- mkFIFO1;
+	FIFO#(Bit#(32)) outQ <- mkFIFO1;
 
 	rule procIn;
 		inQ.deq;
