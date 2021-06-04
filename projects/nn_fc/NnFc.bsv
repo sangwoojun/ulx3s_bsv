@@ -14,7 +14,7 @@ interface MacPeIfc;
 	method Bool resultExist;
 endinterface
 
-typedef 3 PeWaysLog;
+typedef 4 PeWaysLog;
 typedef TExp#(PeWaysLog) PeWays;
 
 Integer inputDim = 1024;
@@ -35,9 +35,9 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 	FloatTwoOp fadd <- mkFloatAdd;
 	FIFO#(Float) addForwardQ <- mkSizedFIFO(4);
 	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ3 <- mkFIFO1;
-	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ2 <- mkSizedBRAMFIFO(64);
+	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ2 <- mkSizedBRAMFIFO(128);
 	FIFO#(Tuple3#(Bit#(8),Bit#(8),Bit#(16))) partialSumIdxQ1 <- mkFIFO1;
-	FIFO#(Float) partialSumQ <- mkSizedBRAMFIFO(64);
+	FIFO#(Float) partialSumQ <- mkSizedBRAMFIFO(128);
 	FIFO#(Float) partialSumQ2 <- mkFIFO;
 
 	Reg#(Bit#(8)) lastInputIdx <- mkReg(0);
@@ -139,9 +139,9 @@ endinterface
 (* synthesize *)
 module mkNnFc(NnFcIfc);
 	Vector#(PeWays, MacPeIfc) pes;
-	Vector#(PeWays, FIFO#(Float)) weightInQs <- replicateM(mkFIFO);
-	Vector#(PeWays, FIFO#(Tuple2#(Float,Bit#(8)))) dataInQs  <- replicateM(mkFIFO);
-	Vector#(PeWays, FIFO#(Tuple3#(Float,Bit#(8),Bit#(8)))) resultOutQs  <- replicateM(mkFIFO);
+	Vector#(PeWays, FIFO#(Float)) weightInQs <- replicateM(mkFIFO1);
+	Vector#(PeWays, FIFO#(Tuple2#(Float,Bit#(8)))) dataInQs  <- replicateM(mkFIFO1);
+	Vector#(PeWays, FIFO#(Tuple3#(Float,Bit#(8),Bit#(8)))) resultOutQs  <- replicateM(mkFIFO1);
 
 	for (Integer i = 0; i < valueOf(PeWays); i=i+1 ) begin
 		pes[i] <- mkMacPe(fromInteger(i));
@@ -181,7 +181,6 @@ module mkNnFc(NnFcIfc);
 	end
 
 
-	FIFO#(Float) testQ <- mkFIFO;
 	method Action dataIn(Float value, Bit#(8) input_idx);
 		dataInQs[0].enq(tuple2(value,input_idx));
 	endmethod
