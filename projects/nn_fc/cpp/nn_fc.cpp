@@ -7,7 +7,7 @@ extern FC_Result recv_result();
 
 void nn_fc(float* matrix, float* input, int input_cnt, int input_dim, int output_dim, float* answer) {
 
-	int pe_ways = 8;
+	int pe_ways = 16;
 
 	for ( int i = 0; i < output_dim/pe_ways; i++ ) {
 		for ( int j = 0; j < input_dim; j++ ) {
