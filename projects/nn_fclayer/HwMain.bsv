@@ -64,7 +64,44 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		end
 	endrule
 
-	Reg#(Bit#(40)) outputBuffer <- mkReg(0); // {float,outidx}, inidx is sent immediately
+	Reg#(Bit#(48)) memWriteOutputBuffer <- mkReg(0);
+	Reg#(Bit#(2)) memWriteOutputBufferCnt <- mkReg(0);
+	Reg#(Bit#(24)) memWriteOutputAddr <- mkReg(327680);
+	Reg#(Bool) memWriteOutputDone <- mkReg(False);
+	rule procMemWriteOutput; //327680 ~ 339967 (Memory Space for Output), 1st: inidx, 2nd: outidx, 3rd: half of float(2/2), 4th: half of float(1/2)
+		if ( memWriteOutputBufferCnt > 0 ) begin
+			memWriteOutputBufferCnt <= memWriteOutputBufferCnt - 1;
+			mem.req(memWriteOutputAddr,truncate(memWriteOutputBuffer),True);
+			memWriteOutputBuffer <= (memWriteOutputBuffer>>16);
+			if ( memWriteOutputAddr + 1 == fromInteger(344064) ) begin
+				memWriteOutputDone <= True;
+				$write("Task of saving output values finish!\n");
+			end
+		end else begin
+			let r <- nn.dataOut; //tpl_1 = result value, tpl_2 = input idx, tpl_3 = output idx
+			mem.req(memWriteOutputAddr,zeroExtend(tpl_2(r)),True); //input idx first
+			memWriteOutputBuffer <= {pack(tpl_1(r)), zeroExtend(tpl_3(r))};
+			memWriteOutputBufferCnt <= 3;
+		end
+		memWriteOutputAddr <= memWriteOutputAddr + 1;
+	endrule
+
+	Reg#(Bit#(24)) memReadOutputAddr <- mkReg(327680);
+	Reg#(Bit#(24)) outputCntUp <- mkReg(0);
+	Reg#(Bit#(24)) outputCntDn <- mkReg(0);
+	FIFO#(Bit#(16)) memReadOutputQ <- mkSizedBRAMFIFO(64);
+	rule procMemReadOutputReq( memWriteOutputDone && (outputCntUp - outputCntDn < 64) );
+		if ( memReadOutputAddr + 1 == memWriteOutputAddr ) memReadOutputAddr <= 0;
+		else memReadOutputAddr <= memReadOutputAddr + 1;
+		mem.req(memReadOutputAddr,?,False);
+	endrule
+	rule procMemReadOutputResp( memWriteOutputDone );
+		let d <- mem.readResp;
+		memReadOutputQ.enq(d);
+		outputCntUp <= outputCntUp + 1;
+	endrule
+
+	Reg#(Bit#(16)) outputBuffer <- mkReg(0); // for sending output value (float)
 	Reg#(Bit#(3)) outputBufferCnt <- mkReg(0);
 	Reg#(Bit#(32)) resultDataCount <- mkReg(0);
 	Reg#(Bit#(32)) lastCycle <- mkReg(0);
@@ -72,8 +109,21 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	rule serializeOutput;
 		if ( outputBufferCnt > 0 ) begin
 			outputBufferCnt <= outputBufferCnt - 1;
-			serialtxQ.enq(truncate(outputBuffer));
-			outputBuffer <= (outputBuffer>>8);
+			if ( outputBufferCnt == fromInteger(5) ) begin
+				memReadOutputQ.deq;
+				outputCntDn <= outputCntDn + 1;
+				serialtxQ.enq(truncate(memReadOutputQ.first));
+			end else begin
+				if ( (outputBufferCnt == fromInteger(4)) || (outputBufferCnt == fromInteger(2)) ) begin
+					memReadOutputQ.deq;
+					let d = memReadOutputQ.first;
+					outputCntDn <= outputCntDn + 1;
+					serialtxQ.enq(truncate(d)); //could relay 8 bits per one cycle to host
+					outputBuffer <= (d>>8);
+				end else begin
+					serialtxQ.enq(truncate(outputBuffer));
+				end
+			end 
 		end else begin
 			if ( resultDataCount == 0 ) begin
 				lastCycle <= cycleCount;
@@ -85,13 +135,12 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 				lastEmitted <= resultDataCount;
 			end
 			resultDataCount <= resultDataCount + 1;
-			let r <- nn.dataOut;
-			serialtxQ.enq(tpl_2(r)); // input idx first
-			outputBuffer <= {pack(tpl_1(r)),tpl_3(r)};
+			memReadOutputQ.deq;
+			serialtxQ.enq(truncate(memReadOutputQ.first)); // input idx first
+			outputCntDn <= outputCntDn + 1;
 			outputBufferCnt <= 5;
 		end
 	endrule
-
 
 
 	Reg#(Maybe#(Bit#(16))) memWriteWeightBuffer <- mkReg(tagged Invalid);
@@ -104,7 +153,6 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		if ( isValid(memWriteWeightBuffer) ) begin
 			memWriteWeightBuffer <= tagged Invalid;
 			mem.req(memWriteWeightAddr,fromMaybe(?,memWriteWeightBuffer),True);
-			//$write("Stored weight address: %d\n", memWriteWeightAddr);
 		end else begin
 			memWriteWeightQ.deq;
 			let d = memWriteWeightQ.first;
@@ -113,35 +161,29 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		end
 		memWriteWeightAddr <= memWriteWeightAddr + 1;
 	endrule
-
 	rule procMemWriteInput;//131072 ~ 327679 (Memory Space for Input)
 		if ( memWriteInputIdxDone ) begin
 			if ( isValid(memWriteInputBuffer) ) begin
 				memWriteInputBuffer <= tagged Invalid;
 				mem.req(memWriteInputAddr,fromMaybe(?,memWriteInputBuffer),True);
 				memWriteInputIdxDone <= False;
-				//$write("write input");
-				//$write("Stored input address: %d\n", memWriteInputAddr);
 				if ( memWriteInputAddr + 1 == fromInteger(327680) ) begin
 					memWriteDone <= True;
-					$write("Storing task finish!\n");
+					$write("Task of saving input and weight values finish!\n");
 				end
 			end else begin
 				memWriteInputQ.deq;
 				let d = memWriteInputQ.first;
 				mem.req(memWriteInputAddr,truncate(d),True);
 				memWriteInputBuffer <= tagged Valid truncate(d>>16);
-				//$write("write input");
 			end
 		end else begin
 			memWriteInputIdxQ.deq;
 			let d = memWriteInputIdxQ.first;
 			mem.req(memWriteInputAddr, d, True);
-			//$write("write input: %d", d);
 			memWriteInputIdxDone <= True;
 		end
 		memWriteInputAddr <= memWriteInputAddr + 1;
-		//$write("address: %d\n", memWriteInputAddr);
 	endrule
 
 	FIFO#(Bit#(16)) memReadWeightQ <- mkSizedBRAMFIFO(256);
@@ -172,8 +214,6 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			cntW <= cntW + 1;
 		end
 		memReadDstQ.enq(0);
-		//$write("Read Address(weight): %d\n", memReadWeightAddr);
-		//$write("The number of stacked FIFO for Weight: %d\n", (weightCntUp-weightCntDn));
 	endrule
 	rule procMemReadInputReq( (memReadDst == 1) && (inputCntUp - inputCntDn < 192) );
 		if ( memReadInputAddr + 1 == memWriteInputAddr ) memReadInputAddr <= 0;
@@ -186,20 +226,15 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			cntI <= cntI + 1;
 		end
 		memReadDstQ.enq(1);
-		//$write("Read Address(input): %d\n", memReadInputAddr);
-		//$write("The number of stacked FIFO for Input: %d\n", (inputCntUp-inputCntDn));
-
 	endrule
 	rule procMemReadResp;
 		let d <- mem.readResp;
 		memReadDstQ.deq;
 		if ( memReadDstQ.first == 0 ) begin
 			memReadWeightQ.enq(d);
-			//$write("Response for weight: %d\n", cntW);
 			weightCntUp <= weightCntUp + 1;
 		end else begin
 			memReadInputQ.enq(d);
-			//$write("Response for input: %d\n", cntI);
 			inputCntUp <= inputCntUp + 1;
 		end
 	endrule
@@ -207,12 +242,11 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	Reg#(Maybe#(Bit#(16))) memReadWeightBuffer <- mkReg(tagged Invalid);
 	Reg#(Maybe#(Bit#(16))) memReadInputBuffer <- mkReg(tagged Invalid);
 	Reg#(Maybe#(Bit#(16))) memReadInputIdxBuffer <- mkReg(tagged Invalid);
-	rule procMemReadWeightResp;
+	rule serializeWeight;
 		if ( isValid(memReadWeightBuffer) ) begin
 			memReadWeightQ.deq;
 			let d = memReadWeightQ.first;
 			nn.weightIn(unpack({d,fromMaybe(?,memReadWeightBuffer)}));
-			//$write("read weight: %d\n", unpack({d,fromMaybe(?,memReadWeightBuffer)}));
 			memReadWeightBuffer <= tagged Invalid;
 			weightCntDn <= weightCntDn + 1;
 		end else begin
@@ -222,13 +256,12 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			weightCntDn <= weightCntDn + 1;
 		end
 	endrule
-	rule procMemReadRespInputResp;
+	rule serializeInput;
 		if ( isValid(memReadInputIdxBuffer) ) begin
 			if ( isValid(memReadInputBuffer) ) begin
 				memReadInputQ.deq;
 				let d = memReadInputQ.first;
 				nn.dataIn(unpack({d,fromMaybe(?,memReadInputBuffer)}), truncate(fromMaybe(?,memReadInputIdxBuffer)));
-				//$write("read input and index: %d, %d\n", unpack({d,fromMaybe(?,memReadInputBuffer)}), fromMaybe(?,memReadInputIdxBuffer));
 				memReadInputBuffer <= tagged Invalid;
 				memReadInputIdxBuffer <= tagged Invalid;
 				inputCntDn <= inputCntDn + 1;
@@ -241,7 +274,6 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		end else begin
 			memReadInputQ.deq;
 			let d = memReadInputQ.first;
-			//$write("input: %d\n", d);
 			memReadInputIdxBuffer <= tagged Valid d;
 			inputCntDn <= inputCntDn + 1;
 		end
