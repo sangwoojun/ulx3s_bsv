@@ -43,6 +43,10 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 	Reg#(Bit#(8)) curOutputIdx <- mkReg(zeroExtend(peIdx));
 	Reg#(Bit#(128)) curMacIdx <- mkReg(0);
 
+
+	Reg#(Bit#(32)) procStartCycle <- mkReg(0);
+	Reg#(Bit#(32)) procCnt <- mkReg(0);
+
 	rule enqMac;
 		inputQ.deq;
 		Float inf = tpl_1(inputQ.first);
@@ -76,6 +80,16 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 			end
 		end
 		fmult.put(inf, wf);
+
+		if ( procStartCycle == 0 ) procStartCycle <= cycleCount;
+		procCnt <= procCnt + 1;
+
+		if ( (procCnt & 32'h1ffff) == 32'h1ffff ) begin
+			Bit#(32) procCycles = cycleCount - procStartCycle;
+			Bit#(32) dutyCycle = procCycles/procCnt;
+			$write( "PE %d -- OPs: %d Cycles: %d -> %d Cycles per OP\n", peIdx, procCnt, procCycles, dutyCycle );
+		end
+
 		
 		if ( curMacIdx < 256 ) begin
 			addForwardQ.enq(unpack(0)); // float '0'
