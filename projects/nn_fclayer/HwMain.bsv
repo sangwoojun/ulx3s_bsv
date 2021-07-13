@@ -75,7 +75,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			memWriteOutputBuffer <= (memWriteOutputBuffer>>16);
 			if ( memWriteOutputAddr + 1 == fromInteger(344064) ) begin
 				memWriteOutputDone <= True;
-				$write("Task of saving output values finish!\n");
+				$write("Finished saving output\n");
 			end
 		end else begin
 			let r <- nn.dataOut; //tpl_1 = result value, tpl_2 = input idx, tpl_3 = output idx
@@ -87,10 +87,8 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	endrule
 
 	Reg#(Bit#(24)) memReadOutputAddr <- mkReg(327680);
-	Reg#(Bit#(24)) outputCntUp <- mkReg(0);
-	Reg#(Bit#(24)) outputCntDn <- mkReg(0);
 	FIFO#(Bit#(16)) memReadOutputQ <- mkSizedBRAMFIFO(64);
-	rule procMemReadOutputReq( memWriteOutputDone && (outputCntUp - outputCntDn < 64) );
+	rule procMemReadOutputReq( memWriteOutputDone ); // && (outputCntUp - outputCntDn < 64) );
 		if ( memReadOutputAddr + 1 == memWriteOutputAddr ) memReadOutputAddr <= 0;
 		else memReadOutputAddr <= memReadOutputAddr + 1;
 		mem.req(memReadOutputAddr,?,False);
@@ -98,7 +96,6 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	rule procMemReadOutputResp( memWriteOutputDone );
 		let d <- mem.readResp;
 		memReadOutputQ.enq(d);
-		outputCntUp <= outputCntUp + 1;
 	endrule
 
 	Reg#(Bit#(16)) outputBuffer <- mkReg(0); // for sending output value (float)
@@ -111,13 +108,11 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			outputBufferCnt <= outputBufferCnt - 1;
 			if ( outputBufferCnt == fromInteger(5) ) begin
 				memReadOutputQ.deq;
-				outputCntDn <= outputCntDn + 1;
 				serialtxQ.enq(truncate(memReadOutputQ.first));
 			end else begin
 				if ( (outputBufferCnt == fromInteger(4)) || (outputBufferCnt == fromInteger(2)) ) begin
 					memReadOutputQ.deq;
 					let d = memReadOutputQ.first;
-					outputCntDn <= outputCntDn + 1;
 					serialtxQ.enq(truncate(d)); //could relay 8 bits per one cycle to host
 					outputBuffer <= (d>>8);
 				end else begin
@@ -137,7 +132,6 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			resultDataCount <= resultDataCount + 1;
 			memReadOutputQ.deq;
 			serialtxQ.enq(truncate(memReadOutputQ.first)); // input idx first
-			outputCntDn <= outputCntDn + 1;
 			outputBufferCnt <= 5;
 		end
 	endrule
@@ -169,7 +163,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 				memWriteInputIdxDone <= False;
 				if ( memWriteInputAddr + 1 == fromInteger(327680) ) begin
 					memWriteDone <= True;
-					$write("Task of saving input and weight values finish!\n");
+					$write("Finished saving input and weight values\n");
 				end
 			end else begin
 				memWriteInputQ.deq;
@@ -186,28 +180,28 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		memWriteInputAddr <= memWriteInputAddr + 1;
 	endrule
 
-	FIFO#(Bit#(16)) memReadWeightQ <- mkSizedBRAMFIFO(256);
-	FIFO#(Bit#(16)) memReadInputQ <- mkSizedBRAMFIFO(192);
+	FIFO#(Bit#(16)) memReadWeightQ <- mkSizedBRAMFIFO(32);
+	FIFO#(Bit#(16)) memReadInputQ <- mkSizedBRAMFIFO(48);
 	FIFO#(Bit#(1)) memReadDstQ <- mkFIFO;
 
 	Reg#(Bit#(24)) memReadWeightAddr <- mkReg(0);
 	Reg#(Bit#(24)) memReadInputAddr <- mkReg(131072);
 
-	Reg#(Bit#(24)) weightCntUp <- mkReg(0);
-	Reg#(Bit#(24)) weightCntDn <- mkReg(0);
-	Reg#(Bit#(24)) inputCntUp <- mkReg(0);
-	Reg#(Bit#(24)) inputCntDn <- mkReg(0);
+	Reg#(Bit#(8)) weightCntUp <- mkReg(0);
+	Reg#(Bit#(8)) weightCntDn <- mkReg(0);
+	Reg#(Bit#(8)) inputCntUp <- mkReg(0);
+	Reg#(Bit#(8)) inputCntDn <- mkReg(0);
 
-	Reg#(Bit#(16)) cntW <- mkReg(0);
-	Reg#(Bit#(16)) cntI <- mkReg(0);
+	Reg#(Bit#(8)) cntW <- mkReg(0);
+	Reg#(Bit#(8)) cntI <- mkReg(0);
 	
 	Reg#(Bit#(1)) memReadDst <- mkReg(0);
 
-	rule procMemReadWeightReq( (memReadDst == 0) && (weightCntUp - weightCntDn < 256) && memWriteDone );
+	rule procMemReadWeightReq( (memReadDst == 0) && (weightCntUp - weightCntDn < 32) && memWriteDone );
 		if ( memReadWeightAddr + 1 == memWriteWeightAddr ) memReadWeightAddr <= 0;
 		else memReadWeightAddr <= memReadWeightAddr + 1;
 		mem.req(memReadWeightAddr,?,False);
-		if ( cntW + 1 == fromInteger(128) ) begin
+		if ( cntW + 1 == fromInteger(16) ) begin
 			memReadDst <= 1;
 			cntW <= 0;
 		end else begin
@@ -215,11 +209,11 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		end
 		memReadDstQ.enq(0);
 	endrule
-	rule procMemReadInputReq( (memReadDst == 1) && (inputCntUp - inputCntDn < 192) );
+	rule procMemReadInputReq( (memReadDst == 1) && (inputCntUp - inputCntDn < 48) );
 		if ( memReadInputAddr + 1 == memWriteInputAddr ) memReadInputAddr <= 0;
 		else memReadInputAddr <= memReadInputAddr + 1;
 		mem.req(memReadInputAddr,?,False);
-		if ( cntI + 1 == fromInteger(192) ) begin
+		if ( cntI + 1 == fromInteger(24) ) begin
 			memReadDst <= 0;
 			cntI <= 0;
 		end else begin

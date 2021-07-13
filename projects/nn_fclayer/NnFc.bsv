@@ -26,8 +26,8 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		cycleCount <= cycleCount + 1;
 	endrule
 
-	FIFO#(Float) weightQ <- mkFIFO;
-	FIFO#(Tuple2#(Float,Bit#(8))) inputQ <- mkFIFO;
+	FIFO#(Float) weightQ <- mkSizedBRAMFIFO(32);
+	FIFO#(Tuple2#(Float,Bit#(8))) inputQ <- mkSizedBRAMFIFO(32);
 	FIFOF#(Tuple3#(Float, Bit#(8), Bit#(8))) outputQ <- mkFIFOF;
 
 
@@ -41,7 +41,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	Reg#(Bit#(8)) lastInputIdx <- mkReg(0);
 	Reg#(Bit#(8)) curOutputIdx <- mkReg(zeroExtend(peIdx));
-	Reg#(Bit#(128)) curMacIdx <- mkReg(0);
+	Reg#(Bit#(32)) curMacIdx <- mkReg(0);
 
 
 	Reg#(Bit#(32)) procStartCycle <- mkReg(0);
@@ -130,12 +130,12 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	Reg#(Tuple2#(Float,Bit#(8))) inputReplicateReg <- mkReg(?);
 	Reg#(Bit#(8)) inputReplicateCnt <- mkReg(0);
-	Reg#(Bit#(32)) cnt <- mkReg(0);
-	Reg#(Bit#(32)) cnt_t <- mkReg(0);
+	Reg#(Bit#(2)) cnt <- mkReg(0);
+	Reg#(Bit#(6)) cnt_t <- mkReg(0);
 
-	FIFO#(Float) weightInQ <- mkFIFO(); //mkSizedBRAMFIFO(4096)
+	FIFO#(Float) weightInQ <- mkSizedBRAMFIFO(32);
 	FIFO#(Float) weightStoreQ <- mkSizedBRAMFIFO(5);
-	FIFO#(Tuple2#(Float,Bit#(8))) inputInQ <- mkFIFO(); //mkSizedBRAMFIFO(65536)
+	FIFO#(Tuple2#(Float,Bit#(8))) inputInQ <- mkSizedBRAMFIFO(32);
 	rule relayInputIn;
 		if ( inputReplicateCnt == 0 ) begin
 			inputInQ.deq;
@@ -149,7 +149,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 	endrule
 	rule relayWeightIn;
 		if ( cnt_t == 0 ) begin
-			if ( cnt + 1 >= fromInteger(4) ) begin
+			if ( cnt  == fromInteger(3) ) begin
 				cnt <= 0;
 				cnt_t <= cnt_t + 1;
 				weightInQ.deq;
@@ -162,8 +162,8 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 				weightStoreQ.enq(weightInQ.first);
 			end
 		end else begin
-			if ( cnt_t + 1 >= fromInteger(64) ) begin
-				if ( cnt + 1 >= fromInteger(4) ) begin
+			if ( cnt_t == fromInteger(63) ) begin
+				if ( cnt == fromInteger(3) ) begin
 					cnt <= 0;
 					cnt_t <= 0;
 					weightStoreQ.deq;
@@ -174,7 +174,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 					weightQ.enq(weightStoreQ.first);
 				end
 			end else begin
-				if ( cnt + 1 >= fromInteger(4) ) begin
+				if ( cnt == fromInteger(3) ) begin
 					cnt <= 0;
 					cnt_t <= cnt_t + 1;
 					weightStoreQ.deq;
@@ -256,18 +256,18 @@ module mkNnFc(NnFcIfc);
 	end
 
 
-	FIFO#(Float) testQ <- mkFIFO;
-	Reg#(Bit#(16)) weightcntcheck <- mkReg(0);
-	Reg#(Bit#(16)) inputcntcheck <- mkReg(0);
+	//FIFO#(Float) testQ <- mkFIFO;
+	//Reg#(Bit#(16)) weightcntcheck <- mkReg(0);
+	//Reg#(Bit#(16)) inputcntcheck <- mkReg(0);
 	method Action dataIn(Float value, Bit#(8) input_idx);
 		dataInQs[0].enq(tuple2(value,input_idx));
 		//$write( "Input cnt: %d\n", inputcntcheck );
-		inputcntcheck <= inputcntcheck + 1;
+		//inputcntcheck <= inputcntcheck + 1;
 	endmethod
 	method Action weightIn(Float weight);
 		weightInQs[0].enq(weight);
 		//$write( "weight cnt: %d\n", weightcntcheck );
-		weightcntcheck <= weightcntcheck + 1;
+		//weightcntcheck <= weightcntcheck + 1;
 	endmethod
 	method ActionValue#(Tuple3#(Float, Bit#(8), Bit#(8))) dataOut;
 		resultOutQs[0].deq;
