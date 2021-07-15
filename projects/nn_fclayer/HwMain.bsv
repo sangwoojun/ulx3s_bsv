@@ -182,7 +182,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 
 	FIFO#(Bit#(16)) memReadWeightQ <- mkSizedBRAMFIFO(32);
 	FIFO#(Bit#(16)) memReadInputQ <- mkSizedBRAMFIFO(48);
-	FIFO#(Bit#(1)) memReadDstQ <- mkFIFO;
+	FIFO#(Bit#(1)) memReadDstQ <- mkSizedBRAMFIFO(32);
 
 	Reg#(Bit#(24)) memReadWeightAddr <- mkReg(0);
 	Reg#(Bit#(24)) memReadInputAddr <- mkReg(131072);
@@ -210,7 +210,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		memReadDstQ.enq(0);
 	endrule
 	rule procMemReadInputReq( (memReadDst == 1) && (inputCntUp - inputCntDn < 48) );
-		if ( memReadInputAddr + 1 == memWriteInputAddr ) memReadInputAddr <= 0;
+		if ( memReadInputAddr + 1 == memWriteInputAddr ) memReadInputAddr <= fromInteger(131072);
 		else memReadInputAddr <= memReadInputAddr + 1;
 		mem.req(memReadInputAddr,?,False);
 		if ( cntI + 1 == fromInteger(24) ) begin
