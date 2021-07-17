@@ -308,7 +308,7 @@ void* swmain(void* param) {
 		float diff = answer[i] - answergolden[i];
 		if ( diff < 0 ) diff = -diff;
 		if ( diff > 1 ) {
-			printf( "Error larger than 1 at %d! %f (%f vs %f)\n", i, diff, answer[i], answergolden[i] );
+			//printf( "Error larger than 1 at %d! %f (%f vs %f)\n", i, diff, answer[i], answergolden[i] );
 		}
 		diffsum += diff;
 	}
