@@ -12,7 +12,7 @@ typedef TDiv#(TSub#(CompressedBitsTotal,4),4) BitBudget;
 
 interface ZfpDecompressIfc;
 	method Action put(Bit#(ZfpComprTypeSz) data);
-	method ActionValue#(Vector#(4,Bit#(32))) get;
+	method ActionValue#(Bit#(32)) get;
 endinterface
 
 function Bit#(9) get_e(Bit#(ZfpComprTypeSz) buffer);
@@ -43,15 +43,17 @@ module mkZfpDecompress (ZfpDecompressIfc);
 
 	FIFO#(Bit#(ZfpComprTypeSz)) inputQ <- mkFIFO;
 	FIFO#(Bit#(9)) eQ <- mkFIFO;
-	FIFO#(Vector#(4,Bit#(32))) outputQ <- mkFIFO;
+	
 	FIFO#(Vector#(4,Bit#(32))) udataQ <- mkFIFO;
 	FIFO#(Vector#(4,Bit#(32))) toUnblock_1 <- mkFIFO;
 	FIFO#(Vector#(4,Bit#(32))) toUnblock_2 <- mkFIFO;
 	FIFO#(Vector#(4,Bit#(32))) toUnblock_3 <- mkFIFO;
 	FIFO#(Vector#(4,Bit#(32))) toUnblock_4 <- mkFIFO;
 	FIFO#(Vector#(4,Bit#(32))) toConvertNega <- mkFIFO;
-	FIFO#(Vector#(4,Bit#(1))) signQ <- mkSizedFIFO(20);
-	FIFO#(Vector#(4,Bit#(32))) toGetResult <- mkFIFO;
+	
+	FIFO#(Bit#(1)) signQ <- mkSizedFIFO(20);
+	FIFO#(Bit#(32)) toGetResult <- mkFIFO;
+	FIFO#(Bit#(32)) outputQ <- mkFIFO;
 
 	rule decompFirst;
 		inputQ.deq;
@@ -160,73 +162,131 @@ module mkZfpDecompress (ZfpDecompressIfc);
 		toConvertNega.enq(d);
 	endrule
 	
+	Reg#(Bit#(2)) convertNegaCycle <- mkReg(0);
+	Vector#(4,Reg#(Bit#(32))) convertNegaBuffer <- replicateM(mkReg(0));
 	rule convertNega;
-		toConvertNega.deq;
-		Vector#(4,Bit#(32)) d = toConvertNega.first;
-		Vector#(4,Bit#(1)) sign = replicate(0);
-		
-		for (Bit#(4) i = 0; i < 4; i = i + 1) begin
-			if (d[i][31] == 1) begin
-				d[i] = -d[i];
-				sign[i] = 1;
+		if ( convertNegaCycle == 0 ) begin
+			toConvertNega.deq;
+			Vector#(4,Bit#(32)) d = toConvertNega.first;
+			Bit#(1) sign = 0;
+			if ( d[0][31] == 1 ) begin
+				d[0] = -d[0];
+				sign = 1;
 			end else begin
-				sign[i] = 0;
+				sign = 0;
 			end
+			for ( Bit#(3) i = 0; i < 4; i = i+1 ) begin
+				convertNegaBuffer[i] <= d[i];
+			end
+			convertNegaCycle <= convertNegaCycle + 1;
+			toGetResult.enq(d[0]);
+			signQ.enq(sign);
+		end else begin
+			let i = convertNegaCycle;
+			let d = convertNegaBuffer[i];
+			Bit#(1) sign = 0;
+			if (d[31] == 1) begin
+				d = -d;
+				sign = 1;
+			end else begin
+				sign = 0;
+			end
+			if ( i == 3 ) convertNegaCycle <= 0;
+			else convertNegaCycle <= convertNegaCycle + 1;
+			toGetResult.enq(d);
+			signQ.enq(sign);
 		end
-		toGetResult.enq(d);
-		signQ.enq(sign);
 	endrule
 	
+	Reg#(Bit#(9)) eBuffer <- mkReg(0);
+	Reg#(Bit#(2)) getResultCycle <- mkReg(0);
 	rule getResult;
 		toGetResult.deq;
 		signQ.deq;
-		eQ.deq;
-
-		let e = eQ.first;
+		if ( getResultCycle == 0 ) begin
+			eQ.deq;
+			let e = eQ.first;
+			eBuffer <= e;
+			Bit#(9) expMax = e - 127;
+			//$write("%d\n", expMax);
+			Bit#(32) d = toGetResult.first;
+			Bit#(32) decomp = 0;
+			Bit#(32) tmp = 0;
+			Bit#(1) sign = signQ.first;
 		
-		Bit#(9) expMax = e - 127;
-		
-		//$write("%d\n", expMax);
-		Vector#(4,Bit#(32)) d = toGetResult.first;
-		Vector#(4,Bit#(32)) decomp = replicate(0);
-		Vector#(4,Bit#(32)) tmp = replicate(0);
-		Vector#(4,Bit#(1)) sign = signQ.first;
-		
-		for (Bit#(4) i = 0; i < 4; i = i +1) begin
 			if ( expMax == fromInteger(385) ) begin
 				//$write("came in to zero case\n");
-				tmp[i] = d[i] >> (127 + (32 - 2));
-				decomp[i][30:0] = tmp[i][30:0];
-				decomp[i][31] = sign[i];
+				tmp = d >> (127 + (32 - 2));
+				decomp[30:0] = tmp[30:0];
+				decomp[31] = sign;
 				//Float value = unpack(decomp[i]);
 				//$write("%d\n", value);
 				//$write("sign bit is %d\n", sign[i]);
 			end else begin
 				if ( expMax < 30 ) begin
 					//$write("came in to normal case_1\n");
-					tmp[i] = d[i] >> ((32 - 2) - expMax);
-					decomp[i][30:0] = tmp[i][30:0];
-					decomp[i][31] = 0;
+					tmp = d >> ((32 - 2) - expMax);
+					decomp[30:0] = tmp[30:0];
+					decomp[31] = sign;
 					//Float value = unpack(decomp[i]);
 					//$write("%d\n", value);
 					//$write("sign bit is %d\n", sign[i]);
 				end else begin
 					//$write("came in to normal case_2\n");
-					tmp[i] = d[i] << (expMax - (32 - 2));
-					decomp[i][30:0] = tmp[i][30:0];
-					decomp[i][31] = sign[i];
+					tmp = d << (expMax - (32 - 2));
+					decomp[30:0] = tmp[30:0];
+					decomp[31] = sign;
 					//Float value = unpack(decomp[i]);
 					//$write("%d\n", value);
 				end
 			end
+			getResultCycle <= getResultCycle + 1;
+			outputQ.enq(decomp);
+		end else begin
+			let e = eBuffer;
+			Bit#(9) expMax = e - 127;
+			//$write("%d\n", expMax);
+			Bit#(32) d = toGetResult.first;
+			Bit#(32) decomp = 0;
+			Bit#(32) tmp = 0;
+			Bit#(1) sign = signQ.first;
+		
+			if ( expMax == fromInteger(385) ) begin
+				//$write("came in to zero case\n");
+				tmp = d >> (127 + (32 - 2));
+				decomp[30:0] = tmp[30:0];
+				decomp[31] = sign;
+				//Float value = unpack(decomp[i]);
+				//$write("%d\n", value);
+				//$write("sign bit is %d\n", sign[i]);
+			end else begin
+				if ( expMax < 30 ) begin
+					//$write("came in to normal case_1\n");
+					tmp = d >> ((32 - 2) - expMax);
+					decomp[30:0] = tmp[30:0];
+					decomp[31] = sign;
+					//Float value = unpack(decomp[i]);
+					//$write("%d\n", value);
+					//$write("sign bit is %d\n", sign[i]);
+				end else begin
+					//$write("came in to normal case_2\n");
+					tmp = d << (expMax - (32 - 2));
+					decomp[30:0] = tmp[30:0];
+					decomp[31] = sign;
+					//Float value = unpack(decomp[i]);
+					//$write("%d\n", value);
+				end
+			end
+			if ( getResultCycle == 3 ) getResultCycle <= 0;
+			else getResultCycle <= getResultCycle + 1;
+			outputQ.enq(decomp);
 		end
-		outputQ.enq(decomp);
 	endrule
 	
 	method Action put(Bit#(ZfpComprTypeSz) data);
 		inputQ.enq(data);
 	endmethod
-	method ActionValue#(Vector#(4,Bit#(32))) get;
+	method ActionValue#(Bit#(32)) get;
 		outputQ.deq;
 		return outputQ.first;
 	endmethod

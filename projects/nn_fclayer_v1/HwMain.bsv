@@ -284,36 +284,11 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		end
 	endrule
 
-	FIFO#(Vector#(4,Bit#(32))) getWeightQ <- mkFIFO;
-	rule getWeightfromDecomp;
-		let r <- zfp.get;
-		getWeightQ.enq(r);
-	endrule
-	
-	Vector#(4,Reg#(Bit#(32))) getWeight <- replicateM(mkReg(0));
-	Reg#(Bit#(2)) getWeightCnt <- mkReg(0);
 	Reg#(Maybe#(Bit#(16))) memReadInputBuffer <- mkReg(tagged Invalid);
 	Reg#(Maybe#(Bit#(16))) memReadInputIdxBuffer <- mkReg(tagged Invalid);
 	rule serializeWeight;
-		if ( getWeightCnt == 0 ) begin
-			getWeightQ.deq;
-			let g = getWeightQ.first;
-			nn.weightIn(unpack(g[0]));
-			Float weightValue = unpack(g[0]);
-			//$write("%d\n", weightValue);
-			for ( Bit#(3) i = 0; i < 4; i = i+1 ) begin
-				getWeight[i] <= g[i];
-			end
-			getWeightCnt <= getWeightCnt + 1;
-		end else begin
-			let g = getWeight[getWeightCnt];
-			nn.weightIn(unpack(g));
-			Float weightValue = unpack(g);
-			//$write("%d\n", weightValue);
-			if ( getWeightCnt == 3 ) getWeightCnt <= 0;
-			else getWeightCnt <= getWeightCnt + 1;
-		end
-
+		let d <- zfp.get;
+		nn.weightIn(unpack(d));
 	endrule
 	rule serializeInput;
 		if ( isValid(memReadInputIdxBuffer) ) begin
