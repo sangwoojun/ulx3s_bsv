@@ -227,9 +227,17 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		memReadDstQ.enq(1);
 		//$write("Input Stack: %d\n", (inputCntUp - inputCntDn));
 	endrule
+
+	Reg#(Bit#(32)) memReadCnt <- mkReg(0);
 	rule procMemReadResp;
 		let d <- mem.readResp;
 		memReadDstQ.deq;
+		memReadCnt <= memReadCnt + 1;
+
+		if ( (memReadCnt&32'h7ffff) == 0 ) begin
+			$write( "Debug Mem Read: %d cycles -- %d mem Reads\n", cycleCount, memReadCnt );
+		end
+
 		if ( memReadDstQ.first == 0 ) begin
 			memReadWeightQ.enq(d);
 			weightCntUp <= weightCntUp + 1;

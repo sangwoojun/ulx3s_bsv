@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 
-#define SDRAM_BYTES (1024*1024*16)
+#define SDRAM_BYTES (1024*1024*32)
 bool sdram_init_ready = false;
 uint16_t* sdram_buffer = NULL;
 
