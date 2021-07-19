@@ -86,15 +86,10 @@ void send_weight(uint8_t data) {
 
 	uart_send(data);
 }
-void send_input(float value, int input_idx) {
+void send_input(uint8_t data, int input_idx) {
 	uart_send(input_idx&0xff);
 	
-	FloatBit8 b;
-	b.f = value;
-	uart_send(b.c[0]);
-	uart_send(b.c[1]);
-	uart_send(b.c[2]);
-	uart_send(b.c[3]);
+	uart_send(data);
 }
 FC_Result recv_result() {
 	FC_Result r;
@@ -235,38 +230,65 @@ void compress_1d(float original[4], BitBuffer* output, int bit_budget, bool verb
 	}
 }
 
-void* swmain(void* param) {
-	srand(time(NULL));
+void readfromfile(float* weight, char* filename, size_t length) {
 	
-	int input_cnt = 64;
-	int output_dim = 64;
-	int input_dim = 1024;
+	FILE* f_weight = fopen("filename", "rb");
+	if (f_weight == NULL ) {
+		printf("File doesn't exit");
+		exit(1);
+	}
+	for (size_t i = 0; i < length; i++) {
+		if (fscanf(f_weight, "%e", &weight[i]) != 1) {
+			printf("Access error in %s array index %zu : input not valid.", filename, i);
+			exit(1);
+		}
+		// else 
+		// {
+			// printf("%e ", float_array[i]);
+		// }
+	}	
+	fclose(f_weight);
+}
+
+void* swmain(void* param) {
+	//srand(time(NULL));
+	
+	// Original dimension
+	size_t input_cnt = 64;
+	size_t output_dim = 64;
+	size_t input_dim = 1024;
+	// Compressed dimension 
+	size_t comp_buffer_size = 5;
+	size_t comp_input_cnt = (input_cnt/4)*comp_buffer_size;
+	size_t comp_output_dim = (output_dim/4)*comp_buffer_size;
+
 	int bit_budget = 5;
 	int cycle = 0;
-
-	bool verbose = false;
-
-	uint8_t* compressed = (uint8_t*)malloc(sizeof(uint8_t)*input_dim*80); // 1024/4 = 256, 256*5 = 1280
-	float* weights = (float*)malloc(sizeof(float)*input_dim*output_dim);
-	for ( int i = 0; i < input_dim*output_dim; i++ ) {
+	
+	bool verbose = false;	
+	
+	float original[4];
+	//readfromfile(&weight[0],filename,4);
+	
+	// compressing weights
+	uint8_t* comp_weights = (uint8_t*)malloc(sizeof(uint8_t)*comp_output_dim*input_dim);
+	float* weights = (float*)malloc(sizeof(float)*output_dim*input_dim);
+	for ( size_t i = 0; i < input_dim*output_dim; i++ ) {
 		weights[i] = 0;
 		if ( rand()%4 == 0 ) {
 			weights[i] = ((float)(rand()%10000))/1000;
 		}
 	}
-		
-	float original[4]; // row major 1d
-	
-	for ( int i = 0; i < input_dim; i ++ ) {
-		for ( int j = 0; j < output_dim; j += 4 ) {
+	for ( size_t i = 0; i < input_dim; i ++ ) {
+		for ( size_t j = 0; j < output_dim; j += 4 ) {
 			BitBuffer* output = new BitBuffer(4*sizeof(float));
-			for ( int k = 0; k < 4; k ++ ) {
+			for ( size_t k = 0; k < 4; k ++ ) {
 				original[k] = weights[(j+k)*input_dim + i];
 			}
 
 			compress_1d(original, output, bit_budget, verbose);
-			for ( int l = 0; l < 5; l ++ ) {
-				compressed[(cycle+l)*input_dim + i] = output->buffer[l];
+			for ( size_t l = 0; l < 5; l ++ ) {
+				comp_weights[(cycle+l)*input_dim + i] = output->buffer[l];
 			}
 			if ( verbose ) printf( "Compressed to %d bits\n", output->BitCount() );
 		
@@ -276,27 +298,47 @@ void* swmain(void* param) {
 		}
 		cycle = 0;
 	}
-	
-	float* inputs = (float*)malloc(sizeof(float)*input_dim*input_cnt);
-	for ( int i = 0; i < input_dim*input_cnt; i++ ) {
+	// compressing inputs
+	uint8_t* comp_inputs = (uint8_t*)malloc(sizeof(uint8_t)*comp_input_cnt*input_dim);
+	float* inputs = (float*)malloc(sizeof(float)*input_cnt*input_dim);
+	for ( size_t i = 0; i < input_dim*input_cnt; i++ ) {
 		inputs[i] = 0;
 		if ( rand()%4 == 0 ) {
 			inputs[i] = ((float)(rand()%10000))/1000;
 		}
 	}
+	for ( size_t i = 0; i < input_dim; i ++ ) {
+		for ( size_t j = 0; j < input_cnt; j += 4 ) {
+			BitBuffer* output = new BitBuffer(4*sizeof(float));
+			for ( size_t k = 0; k < 4; k ++ ) {
+				original[k] = weights[(j+k)*input_dim + i];
+			}
+
+			compress_1d(original, output, bit_budget, verbose);
+			for ( size_t l = 0; l < 5; l ++ ) {
+				comp_inputs[(cycle+l)*input_dim + i] = output->buffer[l];
+			}
+			if ( verbose ) printf( "Compressed to %d bits\n", output->BitCount() );
+		
+			cycle += 5;
 	
+			delete output;
+		}
+		cycle = 0;
+	}
+	// Outputs & output golden
 	float* answer = (float*)malloc(sizeof(float)*output_dim*input_cnt);
 	float* answergolden = (float*)malloc(sizeof(float)*output_dim*input_cnt);
-	for ( int i = 0; i < input_cnt; i++ ) {
-		for ( int j = 0; j < output_dim; j++ ) {
+	for ( size_t i = 0; i < input_cnt; i++ ) {
+		for ( size_t j = 0; j < output_dim; j++ ) {
 			answergolden[i*output_dim+j] = 0;
-			for ( int k = 0; k < input_dim; k++ ) {
+			for ( size_t k = 0; k < input_dim; k++ ) {
 				answergolden[i*output_dim+j] += weights[j*input_dim+k]*inputs[i*input_dim+k];
 			}
 		}
 	}
 	
-	nn_fc(compressed, inputs, input_cnt, input_dim, output_dim, answer);
+	nn_fc(comp_weights, comp_inputs, input_cnt, input_dim, output_dim, answer);
 	printf( "Compute done!" );
 	fflush(stdout);
 
@@ -304,7 +346,7 @@ void* swmain(void* param) {
 	
 	float diffsum = 0;
 	
-	for ( int i = 0; i < input_cnt*output_dim; i++ ) {
+	for ( size_t i = 0; i < input_cnt*output_dim; i++ ) {
 		float diff = answer[i] - answergolden[i];
 		if ( diff < 0 ) diff = -diff;
 		if ( diff > 1 ) {
