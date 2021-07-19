@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-void nn_fc(uint8_t* matrix, float* input, int input_cnt, int input_dim, int output_dim, float* answer);
+void nn_fc(uint8_t* comp_weights, uint8_t* comp_inputs, size_t input_cnt, size_t input_dim, size_t output_dim, float* answer);
 
 typedef struct {
 	float value;

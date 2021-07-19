@@ -1,28 +1,33 @@
 #include "nn_fc.h"
 
 extern void send_weight(uint8_t data);
-extern void send_input(float value, int input_idx);
+extern void send_input(uint8_t data, int input_idx);
 extern FC_Result recv_result();
 
 
-void nn_fc(uint8_t* matrix, float* input, int input_cnt, int input_dim, int output_dim, float* answer) {
+void nn_fc(uint8_t* comp_weights, uint8_t* comp_inputs, size_t input_cnt, size_t input_dim, size_t output_dim, float* answer) {
 
-	int pe_ways = 8;
-	
-	for ( int i = 0; i < input_dim; i++ ) {
-		for ( int j = 0; j < 80/pe_ways; j++ ) {
-			for ( int k = 0; k < pe_ways; k++ ) {
-				send_weight(matrix[((j*pe_ways+k)*input_dim) + i]);
+	size_t done_cnt = 0;
+
+	size_t comp_buffer_size = 5;
+	size_t comp_input_cnt = (input_cnt/4)*comp_buffer_size;
+	size_t comp_output_dim = (output_dim/4)*comp_buffer_size;
+
+	size_t pe_ways = 8;
+	// Send compressed weights
+	for ( size_t i = 0; i < input_dim; i++ ) {
+		for ( size_t j = 0; j < comp_output_dim/pe_ways; j++ ) {
+			for ( size_t k = 0; k < pe_ways; k++ ) {
+				send_weight(comp_weights[((j*pe_ways+k)*input_dim) + i]);
 			}
 		}
 	}
-
-	int done_cnt = 0;
-	int parallel_rows = 64;
-	for ( int i = 0; i < input_cnt/parallel_rows; i++ ) {
-		for ( int j = 0; j < input_dim; j++ ) {
-			for ( int k = 0; k < parallel_rows; k++ ) {
-				send_input(input[(i*64+k)*input_dim + j], (i*64+k));
+	// Send compressed inputs
+	size_t parallel_rows = comp_input_cnt;
+	for ( size_t i = 0; i < comp_input_cnt/parallel_rows; i++ ) {
+		for ( size_t j = 0; j < input_dim; j++ ) {
+			for ( size_t k = 0; k < parallel_rows; k++ ) {
+				send_input(comp_inputs[((i*parallel_rows)+k)*input_dim + j], ((i*parallel_rows)+k));
 			}
 		}		
 			
