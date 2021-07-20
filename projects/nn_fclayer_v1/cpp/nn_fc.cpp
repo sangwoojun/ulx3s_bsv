@@ -36,7 +36,7 @@ void nn_fc(uint8_t* comp_weights, uint8_t* comp_inputs, size_t input_cnt, size_t
 			int idx = res.input_idx*output_dim + res.output_idx;
 			answer[idx] = res.value;
 			done_cnt++;
-			printf( "Writing %f to mem %d <%d,%d> (%d)\n", res.value, idx, res.input_idx, res.output_idx, done_cnt );
+			printf( "Writing %f to mem %d <%d,%d> (%zd)\n", res.value, idx, res.input_idx, res.output_idx, done_cnt );
 			fflush(stdout);
 			res = recv_result();	
 		}
@@ -51,7 +51,7 @@ void nn_fc(uint8_t* comp_weights, uint8_t* comp_inputs, size_t input_cnt, size_t
 
 		int idx = res.input_idx*output_dim + res.output_idx;
 		answer[idx] = res.value;
-		//printf( "Writing %f to mem %d <%d,%d> (%d)\n", res.value, idx, res.input_idx, res.output_idx, done_cnt );
+		//printf( "Writing %f to mem %d <%d,%d> (%zd)\n", res.value, idx, res.input_idx, res.output_idx, done_cnt );
 		fflush(stdout);
 		done_cnt++;
 		//printf( "done cnt: %d\n", done_cnt );

@@ -6,7 +6,7 @@
 #include <cmath>
 #include <string.h>
 #include <pthread.h>
-
+#include <unistd.h>
 #include <queue>
 
 #include "../../../src/cpp/ttyifc.h"
@@ -117,12 +117,6 @@ FC_Result recv_result() {
 	return r;
 }
 
-
-// convert negabinary uint to int
-static int32_t uint2int_uint32(uint32_t x)
-{
-  return (int32_t)((x ^ 0xaaaaaaaa) - 0xaaaaaaaa);
-}
 // convert int to negabinary uint
 static uint32_t int2uint_int32(int32_t x)
 {
@@ -142,25 +136,6 @@ static void fwd_lift_int32(int32_t* p, uint s)
   x += z; x >>= 1; z -= x;
   w += y; w >>= 1; y -= w;
   w += y >> 1; y -= w >> 1;
-
-  p -= s; *p = w;
-  p -= s; *p = z;
-  p -= s; *p = y;
-  p -= s; *p = x;
-}
-static void inv_lift_int32(int32_t* p, uint32_t s)
-{
-  int32_t x, y, z, w;
-  x = *p; p += s;
-  y = *p; p += s;
-  z = *p; p += s;
-  w = *p; p += s;
-
-  y += w >> 1; w -= y >> 1;
-  y += w; w <<= 1; w -= y;
-  z += x; x <<= 1; x -= z;
-  y += z; z <<= 1; z -= y;
-  w += x; x <<= 1; x -= w;
 
   p -= s; *p = w;
   p -= s; *p = z;
@@ -232,21 +207,22 @@ void compress_1d(float original[4], BitBuffer* output, int bit_budget, bool verb
 
 void readfromfile(float* weight, char* filename, size_t length) {
 	
-	FILE* f_weight = fopen("filename", "rb");
+	FILE* f_weight = fopen(filename, "rb");
 	if (f_weight == NULL ) {
-		printf("File doesn't exit");
+		printf("File doesn't exit\n");
 		exit(1);
 	}
-	for (size_t i = 0; i < length; i++) {
-		if (fscanf(f_weight, "%e", &weight[i]) != 1) {
-			printf("Access error in %s array index %zu : input not valid.", filename, i);
-			exit(1);
-		}
+	fread(weight, sizeof(float), 4096, f_weight);
+	//for (size_t i = 0; i < length; i++) {
+	//	if (fscanf(f_weight, "%e", &weight[i]) != 1) {
+	//		printf("Access error in %s array index %zu : input not valid\n", filename, i);
+	//		exit(1);
+	//	}
 		// else 
 		// {
 			// printf("%e ", float_array[i]);
 		// }
-	}	
+	//}	
 	fclose(f_weight);
 }
 
@@ -266,9 +242,11 @@ void* swmain(void* param) {
 	int cycle = 0;
 	
 	bool verbose = false;	
-	
+
+	char filename[] = "vgg19_w24_bias.bin";	
 	float original[4];
-	//readfromfile(&weight[0],filename,4);
+	float weight[4096];
+	readfromfile(weight,filename,4096);
 	
 	// compressing weights
 	uint8_t* comp_weights = (uint8_t*)malloc(sizeof(uint8_t)*comp_output_dim*input_dim);
