@@ -95,7 +95,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 			end
 		end else begin
 			let r <- nn.dataOut; //tpl_1 = result value, tpl_2 = input idx, tpl_3 = output idx
-			$write("output: input idx %d output idx %d\n", tpl_2(r), tpl_3(r));
+			//$write("output: input idx %d output idx %d\n", tpl_2(r), tpl_3(r));
 			mem.req(memWriteOutputAddr,zeroExtend(tpl_2(r)),True); //input idx first
 			memWriteOutputBuffer <= {pack(tpl_1(r)), zeroExtend(tpl_3(r))};
 			memWriteOutputBufferCnt <= 3;
@@ -142,7 +142,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 				lastEmitted <= resultDataCount;
 			end
 			else if (((resultDataCount + 1)&32'hff) == 0 ) begin
-				$write( "Emitting %d elements over %d cycles\n", resultDataCount-lastEmitted, cycleCount-lastCycle );
+				//$write( "Emitting %d elements over %d cycles\n", resultDataCount-lastEmitted, cycleCount-lastCycle );
 				lastCycle <= cycleCount;
 				lastEmitted <= resultDataCount;
 			end

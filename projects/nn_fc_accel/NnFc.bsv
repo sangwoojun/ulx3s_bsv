@@ -29,7 +29,8 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	FIFO#(Float) weightQ <- mkSizedBRAMFIFO(32);
 	FIFO#(Tuple2#(Float,Bit#(8))) inputQ <- mkSizedBRAMFIFO(32);
-	FIFOF#(Tuple3#(Float, Bit#(8), Bit#(14))) outputQ <- mkFIFOF;
+	FIFO#(Tuple3#(Float, Bit#(8), Bit#(14))) outputQ <- mkSizedBRAMFIFO(32768);
+	FIFOF#(Tuple3#(Float, Bit#(8), Bit#(14))) outputOutQ <- mkFIFOF;
 
 
 	FloatTwoOp fmult <- mkFloatMult;
@@ -48,6 +49,9 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	Reg#(Bit#(32)) procStartCycle <- mkReg(0);
 	Reg#(Bit#(32)) procCnt <- mkReg(0);
+
+	Reg#(Bit#(24)) outputCnt <- mkReg(0);
+	Reg#(Bool) relayOutputStart <- mkReg(False);
 
 	rule enqMac;
 		inputQ.deq;
@@ -69,6 +73,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 						curOutputIdx <= curOutputIdx + fromInteger(valueOf(PeWays));
 						curWeightPeriod <= curWeightPeriod + 1;
 						periodCnt <= periodCnt + 1;
+						$write( "Round: %d\n", periodCnt );
 					end else begin
 						curOutputIdx <= zeroExtend(peIdx);
 					end
@@ -97,6 +102,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 							curWeightPeriod <= curWeightPeriod + 1;
 							periodCnt <= periodCnt + 1;
 						end
+						$write( "Round: %d\n", periodCnt );
 					end else begin
 						curOutputIdx <= zeroExtend(peIdx) + fromInteger(period)*(periodCnt - 1);
 					end
@@ -138,8 +144,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		fadd.put(mr,addForwardQ.first);
 		addForwardQ.deq;
 	endrule
-		
-
+	
 	rule relayMacResult;
 		let d <- fadd.get;
 		partialSumQ.enq(d);
@@ -149,6 +154,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		partialSumIdxQ1.deq;
 		partialSumIdxQ2.enq(partialSumIdxQ1.first);
 	endrule
+
 	rule filterDoneResults;
 		partialSumIdxQ2.deq;
 		let psi = partialSumIdxQ2.first;
@@ -157,9 +163,22 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		if (tpl_3(psi)+1 == fromInteger(inputDim) ) begin
 			outputQ.enq(tuple3(ps, tpl_1(psi), tpl_2(psi)));
 			//$write( "Row done %d %d\n", tpl_1(psi), tpl_2(psi) );
+			if ( outputCnt == fromInteger(32767) ) begin
+				outputCnt <= 0;
+				relayOutputStart <= True;
+			end else begin
+				outputCnt <= outputCnt + 1;
+			end
+			//$write( "Output Count: %d\n", outputCnt );
 		end else begin
 			partialSumQ2.enq(ps);
 		end
+	endrule
+
+	rule relayOutputOut(relayOutputStart);
+		outputQ.deq;
+		let d = outputQ.first;
+		outputOutQ.enq(d);
 	endrule
 
 	Reg#(Tuple2#(Float,Bit#(8))) inputReplicateReg <- mkReg(?);
@@ -230,11 +249,11 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		weightInQ.enq(w);
 	endmethod
 	method ActionValue#(Tuple3#(Float, Bit#(8), Bit#(14))) resultGet;
-		outputQ.deq;
-		return outputQ.first;
+		outputOutQ.deq;
+		return outputOutQ.first;
 	endmethod
 	method Bool resultExist;
-		return outputQ.notEmpty;
+		return outputOutQ.notEmpty;
 	endmethod
 endmodule
 
