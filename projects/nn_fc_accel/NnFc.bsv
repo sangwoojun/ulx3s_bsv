@@ -29,12 +29,11 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	FIFO#(Float) weightQ <- mkSizedBRAMFIFO(32);
 	FIFO#(Tuple2#(Float,Bit#(8))) inputQ <- mkSizedBRAMFIFO(32);
-	FIFO#(Tuple3#(Float, Bit#(8), Bit#(14))) outputQ <- mkSizedBRAMFIFO(32768);
-	FIFOF#(Tuple3#(Float, Bit#(8), Bit#(14))) outputOutQ <- mkFIFOF;
-
+	FIFOF#(Tuple3#(Float, Bit#(8), Bit#(14))) outputQ <- mkFIFOF;
 
 	FloatTwoOp fmult <- mkFloatMult;
 	FloatTwoOp fadd <- mkFloatAdd;
+
 	FIFO#(Float) addForwardQ <- mkSizedFIFO(4);
 	FIFO#(Tuple3#(Bit#(8),Bit#(14),Bit#(16))) partialSumIdxQ2 <- mkSizedBRAMFIFO(512);
 	FIFO#(Tuple3#(Bit#(8),Bit#(14),Bit#(16))) partialSumIdxQ1 <- mkFIFO;
@@ -49,9 +48,6 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 
 	Reg#(Bit#(32)) procStartCycle <- mkReg(0);
 	Reg#(Bit#(32)) procCnt <- mkReg(0);
-
-	Reg#(Bit#(24)) outputCnt <- mkReg(0);
-	Reg#(Bool) relayOutputStart <- mkReg(False);
 
 	rule enqMac;
 		inputQ.deq;
@@ -162,23 +158,9 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		let ps = partialSumQ.first;
 		if (tpl_3(psi)+1 == fromInteger(inputDim) ) begin
 			outputQ.enq(tuple3(ps, tpl_1(psi), tpl_2(psi)));
-			//$write( "Row done %d %d\n", tpl_1(psi), tpl_2(psi) );
-			if ( outputCnt == fromInteger(32767) ) begin
-				outputCnt <= 0;
-				relayOutputStart <= True;
-			end else begin
-				outputCnt <= outputCnt + 1;
-			end
-			//$write( "Output Count: %d\n", outputCnt );
 		end else begin
 			partialSumQ2.enq(ps);
 		end
-	endrule
-
-	rule relayOutputOut(relayOutputStart);
-		outputQ.deq;
-		let d = outputQ.first;
-		outputOutQ.enq(d);
 	endrule
 
 	Reg#(Tuple2#(Float,Bit#(8))) inputReplicateReg <- mkReg(?);
@@ -249,11 +231,11 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 		weightInQ.enq(w);
 	endmethod
 	method ActionValue#(Tuple3#(Float, Bit#(8), Bit#(14))) resultGet;
-		outputOutQ.deq;
-		return outputOutQ.first;
+		outputQ.deq;
+		return outputQ.first;
 	endmethod
 	method Bool resultExist;
-		return outputOutQ.notEmpty;
+		return outputQ.notEmpty;
 	endmethod
 endmodule
 
