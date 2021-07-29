@@ -26,7 +26,7 @@ endinterface
 
 module mkFloatMult(FloatTwoOp);
 	Mult18x18DIfc mult18 <- mkMult18x18D;
-	FIFO#(Tuple3#(Bit#(1),Bit#(9),Bool)) signExpZeroQ <- mkSizedFIFO(4);
+	FIFO#(Tuple3#(Bit#(1),Bit#(9),Bool)) signExpZeroQ <- mkSizedFIFO(6);
 	FIFO#(Bit#(32)) outQ <- mkFIFO;
 	rule procMultResult;
 		Bit#(36) mres <- mult18.get;

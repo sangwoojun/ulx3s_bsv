@@ -34,7 +34,7 @@ module mkMacPe#(Bit#(PeWaysLog) peIdx) (MacPeIfc);
 	FloatTwoOp fmult <- mkFloatMult;
 	FloatTwoOp fadd <- mkFloatAdd;
 
-	FIFO#(Float) addForwardQ <- mkSizedFIFO(4);
+	FIFO#(Float) addForwardQ <- mkSizedFIFO(6);
 	FIFO#(Tuple3#(Bit#(8),Bit#(14),Bit#(16))) partialSumIdxQ2 <- mkSizedBRAMFIFO(512);
 	FIFO#(Tuple3#(Bit#(8),Bit#(14),Bit#(16))) partialSumIdxQ1 <- mkFIFO;
 	FIFO#(Float) partialSumQ <- mkSizedBRAMFIFO(512);

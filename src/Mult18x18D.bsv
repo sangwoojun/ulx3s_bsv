@@ -62,7 +62,7 @@ module mkMult18x18D(Mult18x18DIfc);
 `else
 	Mult18x18DImportIfc multin <- mkMult18x18DImport(curclk, currst);
 `endif
-	FIFOF#(Bit#(36)) outQ <- mkFIFOF;
+	FIFOF#(Bit#(36)) outQ <- mkSizedFIFOF(4);
 	Wire#(Bit#(1)) validWire <- mkDWire(0);
 	Reg#(Bit#(4)) validMap <- mkReg(0);
 	Wire#(Bit#(18)) wireA <- mkDWire(0);
@@ -93,7 +93,7 @@ module mkMult18x18D(Mult18x18DIfc);
 
 	Reg#(Bit#(3)) dataInFlightUp <- mkReg(0);
 	Reg#(Bit#(3)) dataInFlightDn <- mkReg(0);
-	method Action put(Bit#(18) a, Bit#(18) b) if ( dataInFlightUp-dataInFlightDn < 4 );
+	method Action put(Bit#(18) a, Bit#(18) b) if ( dataInFlightUp-dataInFlightDn < 5 );
 		wireA <= a;
 		wireB <= b;
 		validWire <= 1;
