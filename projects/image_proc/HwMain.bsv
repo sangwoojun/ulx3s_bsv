@@ -15,6 +15,14 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	Clock curclk <- exposeCurrentClock;
 	Reset currst <- exposeCurrentReset;
 
+	Reg#(Bit#(32)) cycles <- mkReg(0);
+	Reg#(Bit#(32)) cycleOutputStart <- mkReg(0);
+	rule incCyclecount;
+		cycles <= cycles + 1;
+	endrule
+
+	Reg#(Bit#(32)) cycleBegin <- mkReg(0);
+
 	FIFO#(Bit#(8)) serialrxQ <- mkFIFO;
 	FIFO#(Bit#(8)) serialtxQ <- mkFIFO;
 
@@ -39,11 +47,21 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 		serialtxQ.enq(pix);
 	endrule
 
+	Reg#(Bit#(32)) pixOutCnt <- mkReg(0);
 	method ActionValue#(Bit#(8)) serial_tx;
+		if ( cycleOutputStart == 0 ) begin
+			$write( "Impage processing latency: %d cycles\n", cycles - cycleBegin );
+			cycleOutputStart <= cycles;
+		end
+		if ( pixOutCnt + 1 >= 512*256 ) begin
+			$write( "Impage processing total cycles: %d\n", cycles - cycleBegin );
+		end
+		pixOutCnt <= pixOutCnt + 1;
 		serialtxQ.deq;
 		return serialtxQ.first();
 	endmethod
 	method Action serial_rx(Bit#(8) d);
+		if ( cycleBegin == 0 ) cycleBegin <= cycles;
 		serialrxQ.enq(d);
 	endmethod
 endmodule

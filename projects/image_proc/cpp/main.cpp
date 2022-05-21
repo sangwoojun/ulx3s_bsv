@@ -40,6 +40,7 @@ void* swmain(void* param) {
 			writecnt++;
 			rcheck = uart_recv();
 		}
+		if (pixcount >= 512*256) break;
 	}
 
 	while (writecnt < 256*512) {
@@ -51,7 +52,7 @@ void* swmain(void* param) {
 		writecnt++;
 	}
 
-	printf( "Image processing done!\n" );
+	printf( "Image processing done! %d pixels\n", pixcount );
 	printf( "Output written to output.dat\n" );
 	exit(0);
 }
