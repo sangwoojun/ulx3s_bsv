@@ -2,12 +2,14 @@ import FIFO::*;
 import FIFOF::*;
 import SpecialFIFOs::*;
 
+
 import RFile::*;
 import Defines::*;
 import Decode::*;
 import Execute::*;
 
 import Scoreboard::*;
+import BranchPredictor::*;
 
 typedef struct {
 	Word pc;
@@ -43,6 +45,8 @@ module mkProcessor(ProcessorIfc);
 	Reg#(Word)  pc <- mkReg(0);
 	RFile2R1W   rf <- mkRFile2R1W;
 
+	BranchPredictorIfc branch_predictor <- mkBranchPredictor;
+
 	Reg#(ProcStage) stage <- mkReg(Fetch);
 
 	FIFOF#(F2D) f2d <- mkSizedFIFOF(2);
@@ -63,6 +67,7 @@ module mkProcessor(ProcessorIfc);
 	endrule
 
 	rule doFetch (stage == Fetch);
+		//Word curpc = branch_predictor.getNextPc(pc);
 		Word curpc = pc;
 
 		imemReqQ.enq(MemReq32{write:False,addr:truncate(pc),word:?,bytes:3});
@@ -108,6 +113,7 @@ module mkProcessor(ProcessorIfc);
 		let eInst = exec(dInst, rVal1, rVal2, curpc);
 
 		pc <= eInst.nextPC;
+		branch_predictor.setPrediction(curpc, eInst.nextPC);
 
 		execCnt <= execCnt + 1;
 		$write( "[0x%8x:0x%04x] Executing\n", cycles, curpc );
