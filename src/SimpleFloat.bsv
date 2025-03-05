@@ -25,9 +25,16 @@ endinterface
 
 
 module mkFloatMult(FloatTwoOp);
+	FIFO#(Bit#(32)) outQ <- mkFIFO;
+
+	FIFO#(Float) bsimOutQ <- mkFIFO;
+	rule bsimRelay;
+		bsimOutQ.deq;
+		outQ.enq(pack(bsimOutQ.first));
+	endrule
+
 	Mult18x18DIfc mult18 <- mkMult18x18D;
 	FIFO#(Tuple3#(Bit#(1),Bit#(9),Bool)) signExpZeroQ <- mkSizedFIFO(6);
-	FIFO#(Bit#(32)) outQ <- mkFIFO;
 	rule procMultResult;
 		Bit#(36) mres <- mult18.get;
 		signExpZeroQ.deq;
@@ -49,6 +56,10 @@ module mkFloatMult(FloatTwoOp);
 		else outQ.enq({sign,newexp,newfrac,0});
 	endrule
 	method Action put(Float a, Float b);
+`ifdef BSIM
+		let r = multFP(a,b, defaultValue);
+		bsimOutQ.enq(tpl_1(r));
+`else
 		Bit#(32) bina = pack(a);
 		Bit#(32) binb = pack(b);
 		Bit#(18) fraca = zeroExtend(bina[22:6])|(1<<17);
@@ -60,6 +71,7 @@ module mkFloatMult(FloatTwoOp);
 		Bool isZero = (expa==0)||(expb==0);
 		Bit#(9) expsum = zeroExtend(bina[30:23])+zeroExtend(binb[30:23]);
 		signExpZeroQ.enq(tuple3(newsign,expsum,isZero));
+`endif
 	endmethod
 	method ActionValue#(Float) get;
 		outQ.deq;
@@ -217,7 +229,6 @@ module mkFloatAdd(FloatTwoOp);
 		Bit#(32) bina = pack(a);
 		Bit#(32) binb = pack(b);
 		inQ.enq(tuple2(bina,binb));
-
 	endmethod
 	method ActionValue#(Float) get;
 		outQ.deq;
