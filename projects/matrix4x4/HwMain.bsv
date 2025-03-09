@@ -19,7 +19,6 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 	Reset currst <- exposeCurrentReset;
 
 	Reg#(Bit#(32)) cycles <- mkReg(0);
-	Reg#(Bit#(32)) cycleOutputStart <- mkReg(0);
 	rule incCyclecount;
 		cycles <= cycles + 1;
 	endrule
@@ -120,7 +119,7 @@ module mkHwMain#(Ulx3sSdramUserIfc mem) (HwMainIfc);
 				if ( accumulateMatrixI == 3 ) begin
 					accumulatorWaitForFlush <= True;
 					islast = True;
-					$write( "Acceleration done! %d cycles\n", cycles - cycleOutputStart );
+					$write( "Acceleration done! %d cycles\n", cycles - processingStartCycle );
 				end
 			end
 		end

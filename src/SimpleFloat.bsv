@@ -27,12 +27,13 @@ endinterface
 module mkFloatMult(FloatTwoOp);
 	FIFO#(Bit#(32)) outQ <- mkFIFO;
 
+`ifdef BSIM
 	FIFO#(Float) bsimOutQ <- mkFIFO;
 	rule bsimRelay;
 		bsimOutQ.deq;
 		outQ.enq(pack(bsimOutQ.first));
 	endrule
-
+`else
 	Mult18x18DIfc mult18 <- mkMult18x18D;
 	FIFO#(Tuple3#(Bit#(1),Bit#(9),Bool)) signExpZeroQ <- mkSizedFIFO(6);
 	rule procMultResult;
@@ -55,6 +56,8 @@ module mkFloatMult(FloatTwoOp);
 		if ( isZero ) outQ.enq(0);
 		else outQ.enq({sign,newexp,newfrac,0});
 	endrule
+`endif
+
 	method Action put(Float a, Float b);
 `ifdef BSIM
 		let r = multFP(a,b, defaultValue);
