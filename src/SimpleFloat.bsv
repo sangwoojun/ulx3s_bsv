@@ -25,17 +25,9 @@ endinterface
 
 
 module mkFloatMult(FloatTwoOp);
-	FIFO#(Bit#(32)) outQ <- mkFIFO;
-
-`ifdef BSIM
-	FIFO#(Float) bsimOutQ <- mkFIFO;
-	rule bsimRelay;
-		bsimOutQ.deq;
-		outQ.enq(pack(bsimOutQ.first));
-	endrule
-`else
 	Mult18x18DIfc mult18 <- mkMult18x18D;
 	FIFO#(Tuple3#(Bit#(1),Bit#(9),Bool)) signExpZeroQ <- mkSizedFIFO(6);
+	FIFO#(Bit#(32)) outQ <- mkFIFO;
 	rule procMultResult;
 		Bit#(36) mres <- mult18.get;
 		signExpZeroQ.deq;
@@ -56,13 +48,7 @@ module mkFloatMult(FloatTwoOp);
 		if ( isZero ) outQ.enq(0);
 		else outQ.enq({sign,newexp,newfrac,0});
 	endrule
-`endif
-
 	method Action put(Float a, Float b);
-`ifdef BSIM
-		let r = multFP(a,b, defaultValue);
-		bsimOutQ.enq(tpl_1(r));
-`else
 		Bit#(32) bina = pack(a);
 		Bit#(32) binb = pack(b);
 		Bit#(18) fraca = zeroExtend(bina[22:6])|(1<<17);
@@ -74,7 +60,6 @@ module mkFloatMult(FloatTwoOp);
 		Bool isZero = (expa==0)||(expb==0);
 		Bit#(9) expsum = zeroExtend(bina[30:23])+zeroExtend(binb[30:23]);
 		signExpZeroQ.enq(tuple3(newsign,expsum,isZero));
-`endif
 	endmethod
 	method ActionValue#(Float) get;
 		outQ.deq;
@@ -127,8 +112,8 @@ module mkFloatAdd(FloatTwoOp);
 		let tb = (tpl_4(d_));
 		let fraca = ta.frac;
 		let fracb = tb.frac;
-		let expa = ta.expo;
-		let expb = tb.expo;
+		let expa = (ta.sign != tb.sign && fraca == fracb && ta.expo == tb.expo) ? 0 : ta.expo;
+		let expb = (ta.sign != tb.sign && fraca == fracb && ta.expo == tb.expo) ? 0 : tb.expo;
 		let signa = ta.sign;
 		let signb = tb.sign;
 		fraca = (alarger?fraca:(fraca>>expshift));
@@ -168,7 +153,7 @@ module mkFloatAdd(FloatTwoOp);
 		let newsign = tpl_1(d_);
 		let newexp = tpl_2(d_);
 		let newfrac = tpl_3(d_);
-		
+		$display("%x", newfrac);
 		if ( newfrac[18] == 1 ) begin
 			newfrac = newfrac>>1;
 			newexp = newexp + 1;
@@ -181,6 +166,7 @@ module mkFloatAdd(FloatTwoOp);
 		let newsign = tpl_1(d_);
 		let newexp = tpl_2(d_);
 		let newfrac = tpl_3(d_);
+		$display("%x", newfrac);
 
 		if ( newfrac[17:9] == 0 && newfrac != 0 ) begin
 			newfrac = newfrac << 9;
@@ -194,9 +180,11 @@ module mkFloatAdd(FloatTwoOp);
 		let newsign = tpl_1(d_);
 		let newexp = tpl_2(d_);
 		let newfrac = tpl_3(d_);
+		$display("%x", newfrac);
+
 		if ( newfrac[17:14] == 0 && newfrac != 0 ) begin
-			newfrac = newfrac << 5;
-			newexp = newexp - 5;
+			newfrac = newfrac << 4;
+			newexp = newexp - 4;
 		end
 		normalizeQ3.enq(tuple3(newsign,newexp, newfrac));
 	endrule
@@ -206,6 +194,8 @@ module mkFloatAdd(FloatTwoOp);
 		let newsign = tpl_1(d_);
 		let newexp = tpl_2(d_);
 		let newfrac = tpl_3(d_);
+		$display("%x", newfrac);
+
 		if ( newfrac[17:16] == 0 && newfrac != 0 ) begin
 			newfrac = newfrac << 2;
 			newexp = newexp - 2;
@@ -232,6 +222,7 @@ module mkFloatAdd(FloatTwoOp);
 		Bit#(32) bina = pack(a);
 		Bit#(32) binb = pack(b);
 		inQ.enq(tuple2(bina,binb));
+
 	endmethod
 	method ActionValue#(Float) get;
 		outQ.deq;
